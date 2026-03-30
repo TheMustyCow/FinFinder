@@ -1,11 +1,11 @@
-import 'react-native-get-random-values';
+import {userPool} from '../lib/cognito';
 import{useState} from 'react';
 import{View, Text, TextInput, TouchableOpacity, ActivityIndicator} from 'react-native';
 import {useRouter, useLocalSearchParams} from 'expo-router';
-import {CognitoUser, CognitoUserPool} from 'amazon-cognito-identity-js';
+import {CognitoUser} from 'amazon-cognito-identity-js';
 import{COGNITO_CONFIG} from '../constants/cognito';
 
-const userPool = new CognitoUserPool(COGNITO_CONFIG);
+
 export default function ConfirmScreen(){
     const router = useRouter();
     const {email} = useLocalSearchParams<{email: string}>();

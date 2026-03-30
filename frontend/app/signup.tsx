@@ -1,12 +1,9 @@
-import 'react-native-get-random-values';
+import { userPool } from '../lib/cognito';
 import {useState} from 'react';
 import {View, Text, TextInput, TouchableOpacity, ActivityIndicator} from 'react-native';
 import {useRouter} from 'expo-router';
-import {CognitoUserPool, CognitoUserAttribute} from 'amazon-cognito-identity-js';
+import { CognitoUserAttribute} from 'amazon-cognito-identity-js';
 import {COGNITO_CONFIG} from '../constants/cognito';
-
-const userPool = new CognitoUserPool(COGNITO_CONFIG);
-
 
 export default function SignupScreen() {
     const router = useRouter();

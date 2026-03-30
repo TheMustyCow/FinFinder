@@ -1,12 +1,8 @@
-// app/index.tsx
-import 'react-native-get-random-values';
+import {userPool} from '../lib/cognito';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { CognitoUserPool } from 'amazon-cognito-identity-js';
 import { COGNITO_CONFIG } from '../constants/cognito';
 import { View, ActivityIndicator } from 'react-native';
-
-const userPool = new CognitoUserPool(COGNITO_CONFIG);
 
 export default function Index() {
     const router = useRouter();

@@ -1,5 +1,4 @@
-// app/login.tsx
-import 'react-native-get-random-values';
+import {userPool} from '../lib/cognito';
 import { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
@@ -7,13 +6,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-    CognitoUserPool,
     CognitoUser,
     AuthenticationDetails
 } from 'amazon-cognito-identity-js';
 import { COGNITO_CONFIG } from '../constants/cognito';
 
-const userPool = new CognitoUserPool(COGNITO_CONFIG);
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -22,13 +19,36 @@ export default function LoginScreen() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const handleForgotPassword = () => {
+        const cognitoUser = new CognitoUser({
+            Username: email.trim(),
+            Pool: userPool
+        });
+
+        cognitoUser.forgotPassword({
+            onSuccess: () => {
+                console.log('Reset code sent');
+                setError('Password reset code sent to your email');
+                router.push({pathname: '/resetpassword', params: {email: email.trim()}});
+                },
+            onFailure: (err) => {
+                console.log('Forgot password error:', err.message);
+                setError(err.message);
+            }
+        });
+    };
+
     const handleLogin = () => {
         setError('');
         setLoading(true);
+        console.log('Email being sent:', JSON.stringify(email.trim()));
+        console.log('UserPoolId:', COGNITO_CONFIG.UserPoolId);
+        console.log('ClientId:', COGNITO_CONFIG.ClientId);
 
         const authDetails = new AuthenticationDetails({
             Username: email.trim(),
-            Password: password
+            Password: password,
+            AuthFlow: 'USER_PASSWORD_AUTH'
         });
 
         const cognitoUser = new CognitoUser({
@@ -39,14 +59,23 @@ export default function LoginScreen() {
         cognitoUser.authenticateUser(authDetails, {
             onSuccess: (result) => {
                 const token = result.getIdToken().getJwtToken();
+                console.log('Login success');
                 // TODO: store token (AsyncStorage or context) for later API calls
                 console.log('Login successful, token:', token);
                 setLoading(false);
                 router.replace('/home');
+
             },
             onFailure: (err) => {
+                console.log('Login failure code:', err.code);
+                console.log('Login failure message:', err.message);
                 setLoading(false);
                 setError(err.message || 'Login failed');
+            },
+            newPasswordRequired: () => {
+                console.log('New password required');
+                setLoading(false);
+                setError('Password reset required');
             }
         });
     };
@@ -87,11 +116,20 @@ export default function LoginScreen() {
             : <Text style={styles.buttonText}>Log In</Text>
     }
         </TouchableOpacity>
+
+            {/* Code to sign up if you don't have an account. */}
         <TouchableOpacity onPress={() => router.push('signup')} style={{marginTop: 16}}>
             <Text style={{textAlign: 'center', color: '#2e7d32'}}>
                 Don't have an account? Sign up
             </Text>
         </TouchableOpacity>
+
+            {/* code for handling a forgotten password */}
+        <TouchableOpacity onPress={handleForgotPassword} style={{marginTop: 8}}>
+            <Text style={{textAlign: 'center', color: '#667'}}>Forgot password?</Text>
+        </TouchableOpacity>
+
+
         </KeyboardAvoidingView>
     );
     }

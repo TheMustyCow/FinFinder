@@ -16,6 +16,7 @@ export default function RootLayout() {
                 <Stack.Screen name="signup" options={{headerShown: false}} />
                 <Stack.Screen name="confirm" options={{headerShown: false}} />
                 <Stack.Screen name="home" options={{title: 'Home'}} />
+                <Stack.Screen name="resetpassword" options={{headerShown: false}} />
 
                 {/* Later: add <Stack.Screen name="home" /> etc. */}
             </Stack>
