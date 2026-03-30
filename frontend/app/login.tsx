@@ -48,7 +48,6 @@ export default function LoginScreen() {
         const authDetails = new AuthenticationDetails({
             Username: email.trim(),
             Password: password,
-            AuthFlow: 'USER_PASSWORD_AUTH'
         });
 
         const cognitoUser = new CognitoUser({
