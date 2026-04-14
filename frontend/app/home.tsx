@@ -149,6 +149,19 @@ export default function Home() {
     </View>
 </View>
 
+            {/* WHO WE ARE */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Who We Are</Text>
+
+                <View style={styles.aboutCard}>
+                    <Text style={styles.aboutText}>
+                        Fin Finder helps anglers track catches, discover fish data, and log real-time fishing conditions.
+                        Built for both beginners and experienced fishermen, our goal is to make fishing smarter,
+                        easier, and more connected.
+                    </Text>
+                </View>
+            </View>
+
             {/* EXPLORE */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Explore</Text>
@@ -319,5 +332,17 @@ loadingText: {
     color: '#d1fae5',
     marginTop: 10,
     fontSize: 14,
+},
+
+aboutCard: {
+    backgroundColor: '#1e6f8b',
+    padding: 15,
+    borderRadius: 12,
+},
+
+aboutText: {
+    color: '#e2e8f0',
+    fontSize: 14,
+    lineHeight: 20,
 },
 });
