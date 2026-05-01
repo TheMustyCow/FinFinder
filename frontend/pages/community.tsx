@@ -3,13 +3,24 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { useState, useRef, useEffect } from 'react';
 import Card from '../components/community/Card';
+import { catchesService, type Catch } from '../services/catches';
 
 export default function CommunityScreen() {
-    const cards = Array.from({ length: 63 }, (_, i) => i);
+    const [catches, setCatches] = useState<Catch[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const cardsPerPage = 18;
-    const totalPages = Math.ceil(cards.length / cardsPerPage);
+    const totalPages = Math.ceil(catches.length / cardsPerPage);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    // Fetch catches from the mediator service on component mount
+    useEffect(() => {
+        loadCatches();
+    }, []);
+
+    const loadCatches = async () => {
+        const communityCatches = await catchesService.getCommunityCatches();
+        setCatches(communityCatches);
+    };
 
     useEffect(() => {
         setTimeout(() => {
@@ -17,7 +28,7 @@ export default function CommunityScreen() {
         }, 0);
     }, [currentPage]);
 
-    const currentCards = cards.slice(
+    const currentCatches = catches.slice(
         currentPage * cardsPerPage,
         (currentPage + 1) * cardsPerPage
     );
@@ -28,16 +39,16 @@ export default function CommunityScreen() {
                 <Text style={styles.title}>Community</Text>
             </View>
             <View style={styles.contentContainer}>
-                <ScrollView 
+                <ScrollView
                     ref={scrollViewRef}
-                    style={styles.scrollView} 
+                    style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                 >
                     <View style={styles.grid}>
-                        {currentCards.map((_, index) => (
-                            <Card 
-                                key={currentPage * cardsPerPage + index} 
-                                cardNumber={currentPage * cardsPerPage + index + 1} 
+                        {currentCatches.map((catchData) => (
+                            <Card
+                                key={catchData.id}
+                                catchData={catchData}
                             />
                         ))}
                     </View>
