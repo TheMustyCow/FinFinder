@@ -9,12 +9,13 @@ export default function CommunityScreen() {
     const [catches, setCatches] = useState<Catch[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const cardsPerPage = 18;
-    const totalPages = Math.ceil(catches.length / cardsPerPage);
+    const totalPages = Math.max(1, Math.ceil(catches.length / cardsPerPage));
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Fetch catches from the mediator service on component mount
     useEffect(() => {
         loadCatches();
+        return catchesService.subscribe(loadCatches);
     }, []);
 
     const loadCatches = async () => {
@@ -44,14 +45,21 @@ export default function CommunityScreen() {
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    <View style={styles.grid}>
-                        {currentCatches.map((catchData) => (
-                            <Card
-                                key={catchData.id}
-                                catchData={catchData}
-                            />
-                        ))}
-                    </View>
+                    {currentCatches.length > 0 ? (
+                        <View style={styles.grid}>
+                            {currentCatches.map((catchData) => (
+                                <Card
+                                    key={catchData.id}
+                                    catchData={catchData}
+                                />
+                            ))}
+                        </View>
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyTitle}>No community catches yet</Text>
+                            <Text style={styles.emptyText}>Post one from My Catches to start the feed.</Text>
+                        </View>
+                    )}
                 </ScrollView>
                 <View style={styles.pagination}>
                     <TouchableOpacity
@@ -112,6 +120,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
+    },
+    emptyState: {
+        minHeight: 320,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyTitle: {
+        color: '#0f172a',
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    emptyText: {
+        color: '#64748b',
+        fontSize: 14,
     },
     pagination: {
         flexDirection: 'row',
