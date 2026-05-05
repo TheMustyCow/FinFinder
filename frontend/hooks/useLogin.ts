@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';//useCallback optimizes functions so they aren't recreated on every render.
 import { authService } from '../services/auth';
 import { useRouter } from 'expo-router';
 
+//Interface defining the names and types of arguments that useLogin() must return.
 interface UseLoginReturn {
     email: string;
     setEmail: (email: string) => void;
@@ -15,10 +16,10 @@ interface UseLoginReturn {
 
 export function useLogin(): UseLoginReturn {
     const router = useRouter();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');//state and state updating function for email.
+    const [password, setPassword] = useState('');//state and state updating function for password.
+    const [error, setError] = useState('');//state and state updating function for error.
+    const [loading, setLoading] = useState(false);//state and state updating function for loading.
 
     const handleLogin = useCallback(async () => {
         setError('');
@@ -34,7 +35,8 @@ export function useLogin(): UseLoginReturn {
         } else {
             setError(result.error || 'Login failed');
         }
-    }, [email, password, router]);
+    }, [email, password, router]);//[email, password, router] defines the dependency array of useCallback(). If any of these
+                                  //values changes then handleLogin will be recreated.
 
     const handleForgotPassword = useCallback(async () => {
         setError('');
