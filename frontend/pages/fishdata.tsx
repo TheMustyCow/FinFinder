@@ -5,16 +5,22 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { useTopBait } from '../hooks/useTopBait';
 import { usePopularLocations } from '../hooks/usePopularLocations';
 import {useBestTimeOfDay} from "../hooks/useBestTimeOfDay";
+import {useRarestFish} from "../hooks/useRarestFish";
+import {useTopAnglers} from "../hooks/useTopAnglers";
 import { BaitCard } from '../components/ui/BaitCard';
 import { LocationCard } from '../components/ui/LocationCard';
 import { Checkbox } from '@components/ui/Checkbox';
 import {BestTimeCard} from "@components/ui/BestTimeCard";
+import {RarestFishCard} from "@components/ui/RarestFishCard";
+import {TopAnglersCard} from "@components/ui/TopAnglersCard"
 
 export default function FishingDataPage() {
     const [species, setSpecies] = useState<string>('');
     const [showBait, setShowBait] = useState<boolean>(false);
     const [showLocations, setShowLocations] = useState<boolean>(false);
     const [showBestTime, setBestTime] = useState<boolean>(false);
+    const [showRarestFish, setRarestFish] = useState<boolean>(false);
+    const [showTopAnglers, setTopAnglers] = useState<boolean>(false);
 
     //Note that when a hook function is called, all of the state variables defined in the hook function are
     //implicitly attached to the fibre node of the component that called that hook function.
@@ -22,10 +28,15 @@ export default function FishingDataPage() {
     const { results: baitResults, loading: baitLoading, error: baitError, fetchTopBait } = useTopBait();
     const { results: locationResults, loading: locationLoading, error: locationError, fetchPopularLocations } = usePopularLocations();
     const { results: timeOfDayResults, loading: bestTimeLoading, error: bestTimeError, fetchBestTimeOfDay} = useBestTimeOfDay();
+    const { results: rarestFishResults, loading: rarestFishLoading, error: rarestFishError, fetchRarestFish} = useRarestFish();
+    const { results: topAnglersResults, loading: topAnglersLoading, error: topAnglersError, fetchTopAnglers} = useTopAnglers();
+
     const handleSearch = () => {
         if (showBait) fetchTopBait(species);
         if (showLocations) fetchPopularLocations(species);
         if(showBestTime) fetchBestTimeOfDay(species);
+        if(showRarestFish) fetchRarestFish();
+        if(showTopAnglers) fetchTopAnglers();
     };
 
     return (
@@ -63,6 +74,16 @@ export default function FishingDataPage() {
             <Text style={styles.groupTitle}>General Queries</Text>
             <View style={styles.checkboxGroup}>
                 {/* Top Anglers and Trending Catches will go here */}
+                <Checkbox
+                    label="Rarest Fish"
+                    checked={showRarestFish}
+                    onPress={() => setRarestFish(!showRarestFish)}
+                />
+                <Checkbox
+                    label="Top Anglers"
+                    checked={showTopAnglers}
+                    onPress={() => setTopAnglers(!showTopAnglers)}
+                />
             </View>
 
             {/* Search Button */}
@@ -105,6 +126,28 @@ export default function FishingDataPage() {
                         {bestTimeError && <Text style={styles.error}>{bestTimeError}</Text>}
                         {timeOfDayResults.map((item, index) => (
                             <BestTimeCard key={item.timeOfDay} timeOfDay={item.timeOfDay} count={item.count} rank={index + 1} />
+                        ))}
+                    </View>
+                )}
+                {/* Rarest Fish Results */}
+                {showRarestFish && (
+                    <View>
+                        <Text style={styles.sectionTitle}>Rarest Fish</Text>
+                        {rarestFishLoading && <Text>Loading...</Text>}
+                        {rarestFishError && <Text style={styles.error}>{rarestFishError}</Text>}
+                        {rarestFishResults.map((item, index) => (
+                            <RarestFishCard key={item.species} species={item.species} count={item.count} rank={index + 1}/>
+                        ))}
+                    </View>
+                )}
+                {/* Top Anglers Results */}
+                {showTopAnglers && (
+                    <View>
+                        <Text style={styles.sectionTitle}>Top Anglers</Text>
+                        {topAnglersLoading && <Text>Loading...</Text>}
+                        {topAnglersError && <Text style={styles.error}>{topAnglersError}</Text>}
+                        {topAnglersResults.map((item, index) => (
+                            <TopAnglersCard key={item.username} username={item.username} count={item.count} rank={index + 1}/>
                         ))}
                     </View>
                 )}
