@@ -7,6 +7,7 @@ import { catchesService, type Catch } from '../services/catches';
 
 export default function CommunityScreen() {
     const [catches, setCatches] = useState<Catch[]>([]);
+    const [loadError, setLoadError] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const cardsPerPage = 18;
     const totalPages = Math.max(1, Math.ceil(catches.length / cardsPerPage));
@@ -19,8 +20,13 @@ export default function CommunityScreen() {
     }, []);
 
     const loadCatches = async () => {
-        const communityCatches = await catchesService.getCommunityCatches();
-        setCatches(communityCatches);
+        try {
+            const communityCatches = await catchesService.getCommunityCatches();
+            setCatches(communityCatches);
+            setLoadError('');
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Unable to load community catches');
+        }
     };
 
     useEffect(() => {
@@ -45,7 +51,12 @@ export default function CommunityScreen() {
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {currentCatches.length > 0 ? (
+                    {loadError ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyTitle}>Unable to load community catches</Text>
+                            <Text style={styles.emptyText}>{loadError}</Text>
+                        </View>
+                    ) : currentCatches.length > 0 ? (
                         <View style={styles.grid}>
                             {currentCatches.map((catchData) => (
                                 <Card
@@ -119,7 +130,8 @@ const styles = StyleSheet.create({
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
+        columnGap: '2%',
     },
     emptyState: {
         minHeight: 320,

@@ -1,20 +1,10 @@
-//export { default } from '../pages/mycatches';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
-import { useState } from 'react';
-
-type Catch = {
-    id: number;
-    fish: string;
-    location: string;
-    weight: string;
-    length: string;
-    bait: string;
-    notes: string;
-    photo?: string;
-};
+import { useEffect, useState } from 'react';
+import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
+import { catchesService, type Catch } from '../services/catches';
 
 export default function MyCatches() {
     const [modalVisible, setModalVisible] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const [fish, setFish] = useState('');
     const [location, setLocation] = useState('');
@@ -22,35 +12,83 @@ export default function MyCatches() {
     const [length, setLength] = useState('');
     const [bait, setBait] = useState('');
     const [notes, setNotes] = useState('');
-    const [photo, setPhoto] = useState<string | null>(null);
+    const [postToCommunity, setPostToCommunity] = useState(false);
 
     const [catches, setCatches] = useState<Catch[]>([]);
+    const [loadError, setLoadError] = useState('');
 
-    const addCatch = () => {
-    if (!fish || !location || !weight) return;
+    useEffect(() => {
+        loadCatches();
+        return catchesService.subscribe(loadCatches);
+    }, []);
 
-    const newCatch: Catch = {
-        id: Date.now(),
-        fish,
-        location,
-        weight,
-        length,
-        bait,
-        notes,
-        photo: photo ?? undefined,
+    const loadCatches = async () => {
+        try {
+            const myCatches = await catchesService.getMyCatches();
+            setCatches(myCatches);
+            setLoadError('');
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Unable to load catches');
+        }
     };
 
-    setCatches([newCatch, ...catches]);
+    const resetForm = () => {
+        setFish('');
+        setLocation('');
+        setWeight('');
+        setLength('');
+        setBait('');
+        setNotes('');
+        setPostToCommunity(false);
+    };
 
-    setFish('');
-    setLocation('');
-    setWeight('');
-    setLength('');
-    setBait('');
-    setNotes('');
-    setPhoto(null);
-    setModalVisible(false);
-};
+    const shareCatchToCommunity = async (catchId: string) => {
+        const result = await catchesService.postCatchToCommunity(catchId);
+
+        if (!result.success) {
+            Alert.alert('Unable to share catch', result.error ?? 'Please try again.');
+        }
+    };
+
+    const addCatch = async () => {
+        const parsedWeight = Number(weight);
+        const parsedLength = Number(length);
+
+        if (
+            !fish ||
+            !location ||
+            !weight ||
+            !length ||
+            Number.isNaN(parsedWeight) ||
+            Number.isNaN(parsedLength) ||
+            isSaving
+        ) {
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            const savedCatch = await catchesService.createCatch({
+                fish,
+                location,
+                weight: parsedWeight,
+                length: parsedLength,
+                bait: bait || undefined,
+                desc: notes || '',
+            });
+
+            if (postToCommunity) {
+                await shareCatchToCommunity(savedCatch.id);
+            }
+
+            resetForm();
+            setModalVisible(false);
+            setLoadError('');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -67,6 +105,7 @@ export default function MyCatches() {
             </TouchableOpacity>
 
             {/* LIST */}
+            {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
             <ScrollView>
                 {catches.map((item) => (
                     <View key={item.id} style={styles.card}>
@@ -75,9 +114,19 @@ export default function MyCatches() {
                         <Text style={styles.text}>📍 {item.location}</Text>
                         <Text style={styles.text}>⚖️ {item.weight} lbs</Text>
                         <Text style={styles.text}>📏 {item.length} in</Text>
-                        <Text style={styles.text}>🪱 {item.bait}</Text>
-                        <Text style={styles.text}>📝 {item.notes}</Text>
-                </View>
+                        {!!item.bait && <Text style={styles.text}>🪱 {item.bait}</Text>}
+                        {!!item.desc && <Text style={styles.text}>📝 {item.desc}</Text>}
+                        {item.isPostedToCommunity ? (
+                            <Text style={styles.sharedText}>Shared to Community</Text>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.shareButton}
+                                onPress={() => shareCatchToCommunity(item.id)}
+                            >
+                                <Text style={styles.shareButtonText}>Share to Community</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 ))}
             </ScrollView>
 
@@ -100,14 +149,6 @@ export default function MyCatches() {
                             value={fish}
                             onChangeText={setFish}
                         />
-                        <TouchableOpacity
-                            style={styles.photoButton}
-                            onPress={() => setPhoto('fake-photo-placeholder')}
-                        >
-                            <Text style={{ color: '#fff' }}>
-                                📸 Add Photo (placeholder)
-                            </Text>
-                        </TouchableOpacity>
 
                         <TextInput
                             placeholder="Location"
@@ -123,6 +164,7 @@ export default function MyCatches() {
                             style={styles.input}
                             value={weight}
                             onChangeText={setWeight}
+                            keyboardType="numeric"
                         />
 
                         <TextInput
@@ -131,6 +173,7 @@ export default function MyCatches() {
                             style={styles.input}
                             value={length}
                             onChangeText={setLength}
+                            keyboardType="numeric"
                         />
 
                         <TextInput
@@ -150,8 +193,22 @@ export default function MyCatches() {
                             multiline
                         />
 
-                        <TouchableOpacity style={styles.saveButton} onPress={addCatch}>
-                            <Text style={styles.saveText}>Save 🎣</Text>
+                        <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => setPostToCommunity((value) => !value)}
+                        >
+                            <View style={[styles.checkbox, postToCommunity && styles.checkboxChecked]}>
+                                {postToCommunity && <Text style={styles.checkboxMark}>✓</Text>}
+                            </View>
+                            <Text style={styles.checkboxLabel}>Post to Community</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                            onPress={addCatch}
+                            disabled={isSaving}
+                        >
+                            <Text style={styles.saveText}>{isSaving ? 'Saving...' : 'Save 🎣'}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -213,6 +270,12 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
+    errorText: {
+        color: '#b91c1c',
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
@@ -221,13 +284,13 @@ const styles = StyleSheet.create({
     },
 
     modalContent: {
-    width: '70%',
-    height: '70%',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    justifyContent: 'space-between',
-},
+        width: '70%',
+        height: '70%',
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 20,
+        justifyContent: 'space-between',
+    },
 
     modalTitle: {
         fontSize: 18,
@@ -245,6 +308,39 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
 
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#0ea5e9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+    },
+
+    checkboxChecked: {
+        backgroundColor: '#0ea5e9',
+    },
+
+    checkboxMark: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+        lineHeight: 18,
+    },
+
+    checkboxLabel: {
+        color: '#155e75',
+        fontWeight: 'bold',
+    },
+
     saveButton: {
         backgroundColor: '#0ea5e9',
         padding: 12,
@@ -253,9 +349,32 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
 
+    saveButtonDisabled: {
+        backgroundColor: '#94a3b8',
+    },
+
     saveText: {
         color: '#fff',
         fontWeight: 'bold',
+    },
+
+    shareButton: {
+        backgroundColor: '#0ea5e9',
+        padding: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+
+    shareButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+
+    sharedText: {
+        color: '#bbf7d0',
+        fontWeight: 'bold',
+        marginTop: 10,
     },
 
     cancelText: {
@@ -263,12 +382,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 10,
     },
-
-    photoButton: {
-    backgroundColor: '#155e75',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-},
 });

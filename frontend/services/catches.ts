@@ -12,86 +12,53 @@ export interface Catch {
     isPostedToCommunity?: boolean;
 }
 
-const currentUserId = 'user-001';
-const currentUserName = 'Thomas';
+export interface CreateCatchInput {
+    fish: string;
+    weight: number;
+    length: number;
+    location: string;
+    desc: string;
+    bait?: string;
+}
 
-const myCatches: Catch[] = [
-    {
-        id: 'catch-001',
-        fish: 'Largemouth Bass',
-        weight: 4.8,
-        length: 21,
-        location: 'Lake Washington',
-        date: '2026-04-28',
-        desc: 'Caught near the reeds right before sunset. The jig bite finally turned on.',
-        userId: currentUserId,
-        userName: currentUserName,
-        bait: 'Jig',
-        isPostedToCommunity: true,
-    },
-    {
-        id: 'catch-002',
-        fish: 'Rainbow Trout',
-        weight: 2.3,
-        length: 16,
-        location: 'Green Lake',
-        date: '2026-04-22',
-        desc: 'First cast after switching to a small spinner.',
-        userId: currentUserId,
-        userName: currentUserName,
-        bait: 'Spinner',
-        isPostedToCommunity: false,
-    },
-    {
-        id: 'catch-003',
-        fish: 'Smallmouth Bass',
-        weight: 3.1,
-        length: 18,
-        location: 'Sammamish River',
-        date: '2026-04-15',
-        desc: 'Pulled from a rocky bank in clear water.',
-        userId: currentUserId,
-        userName: currentUserName,
-        bait: 'Live worm',
-        isPostedToCommunity: false,
-    },
-];
-
-let communityCatches: Catch[] = [
-    myCatches[0],
-    {
-        id: 'catch-101',
-        fish: 'Coho Salmon',
-        weight: 7.6,
-        length: 27,
-        location: 'Puget Sound',
-        date: '2026-04-26',
-        desc: 'Trolling along the drop-off paid off after a slow morning.',
-        userId: 'user-002',
-        userName: 'Joe',
-        bait: 'Spoon',
-        isPostedToCommunity: true,
-    },
-    {
-        id: 'catch-102',
-        fish: 'Channel Catfish',
-        weight: 9.4,
-        length: 30,
-        location: 'Columbia River',
-        date: '2026-04-20',
-        desc: 'Night fishing from the dock with cut bait.',
-        userId: 'user-003',
-        userName: 'Bob',
-        bait: 'Cut bait',
-        isPostedToCommunity: true,
-    },
-];
+const API_BASE_URL = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com';
+const TEMP_USER_ID = 'user-001'; // TODO: Replace with Cognito Authorization header.
+const TEMP_USER_NAME = 'Thomas'; // TODO: Replace with Cognito user display name/email.
 
 type CatchesListener = () => void;
 const listeners = new Set<CatchesListener>();
+let myCatchesCache: Catch[] | null = null;
+let communityCatchesCache: Catch[] | null = null;
 
 const notifyListeners = () => {
     listeners.forEach((listener) => listener());
+};
+
+const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'X-User-Id': TEMP_USER_ID,
+    'X-User-Name': TEMP_USER_NAME,
+});
+
+const parseResponse = async <T>(response: Response): Promise<T> => {
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        const message = body?.error ?? 'Request failed';
+        throw new Error(message);
+    }
+
+    return body as T;
+};
+
+const upsertCatch = (catches: Catch[], catchData: Catch): Catch[] => {
+    const existingIndex = catches.findIndex((item) => item.id === catchData.id);
+
+    if (existingIndex === -1) {
+        return [catchData, ...catches];
+    }
+
+    return catches.map((item) => (item.id === catchData.id ? catchData : item));
 };
 
 /**
@@ -105,16 +72,63 @@ export const catchesService = {
         };
     },
 
-    async getMyCatches(): Promise<Catch[]> {
-        return [...myCatches];
+    clearCache(): void {
+        myCatchesCache = null;
+        communityCatchesCache = null;
+    },
+
+    async getMyCatches(forceRefresh = false): Promise<Catch[]> {
+        if (myCatchesCache && !forceRefresh) {
+            return [...myCatchesCache];
+        }
+
+        const response = await fetch(`${API_BASE_URL}/catches/mine`, {
+            headers: getHeaders(),
+        });
+
+        myCatchesCache = await parseResponse<Catch[]>(response);
+
+        return [...myCatchesCache];
+    },
+
+    /**
+     * Creates a catch in the user's personal log.
+     */
+    async createCatch(input: CreateCatchInput): Promise<Catch> {
+        const response = await fetch(`${API_BASE_URL}/catches`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(input),
+        });
+
+        const newCatch = await parseResponse<Catch>(response);
+        myCatchesCache = upsertCatch(myCatchesCache ?? [], newCatch);
+
+        if (newCatch.isPostedToCommunity) {
+            communityCatchesCache = upsertCatch(communityCatchesCache ?? [], newCatch);
+        }
+
+        notifyListeners();
+
+        return newCatch;
     },
 
     /**
      * Fetches all catches posted to the community
      * Called by community.tsx to display cards
      */
-    async getCommunityCatches(): Promise<Catch[]> {
-        return [...communityCatches];
+    async getCommunityCatches(forceRefresh = false): Promise<Catch[]> {
+        if (communityCatchesCache && !forceRefresh) {
+            return [...communityCatchesCache];
+        }
+
+        const response = await fetch(`${API_BASE_URL}/catches/community`, {
+            headers: getHeaders(),
+        });
+
+        communityCatchesCache = await parseResponse<Catch[]>(response);
+
+        return [...communityCatchesCache];
     },
 
     /**
@@ -122,22 +136,30 @@ export const catchesService = {
      * Called by mycatches.tsx when user clicks "post to community"
      */
     async postCatchToCommunity(catchId: string): Promise<{ success: boolean; error?: string }> {
-        const catchToPost = myCatches.find((catchData) => catchData.id === catchId);
+        try {
+            const response = await fetch(`${API_BASE_URL}/catches/${catchId}/community`, {
+                method: 'POST',
+                headers: getHeaders(),
+            });
 
-        if (!catchToPost) {
+            const updatedCatch = await parseResponse<Catch>(response);
+
+            if (myCatchesCache) {
+                myCatchesCache = upsertCatch(myCatchesCache, updatedCatch);
+            }
+
+            if (updatedCatch.isPostedToCommunity) {
+                communityCatchesCache = upsertCatch(communityCatchesCache ?? [], updatedCatch);
+            }
+
+            notifyListeners();
+
+            return { success: true };
+        } catch (error) {
             return {
                 success: false,
-                error: 'Catch not found',
+                error: error instanceof Error ? error.message : 'Unable to share catch',
             };
         }
-
-        catchToPost.isPostedToCommunity = true;
-        communityCatches = [
-            { ...catchToPost, isPostedToCommunity: true },
-            ...communityCatches.filter((catchData) => catchData.id !== catchId),
-        ];
-        notifyListeners();
-
-        return { success: true };
     },
 };
