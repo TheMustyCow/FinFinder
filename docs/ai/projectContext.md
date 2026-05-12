@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-**FinFinder** is a fishing-focused mobile and web application that enables users to collaborate and track fish globally. The app provides features for logging catches, viewing fish data, exploring fishing spots on a map, and engaging with a community of anglers.
+**FinFinder** is a fishing-focused mobile and web application that helps users log catches, view fish-related data, explore fishing spots, and share catches with the community.
 
 - **Repository**: https://github.com/TheMustyCow/FinFinder.git
 - **Deadline**: June 10th
-- **Target Platforms**: iOS, Android (via Expo), Web
+- **Target Platforms**: iOS, Android, Web via Expo
 
 ## Technology Stack
 
@@ -14,74 +14,182 @@
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Expo | ~55.0.5 | Core SDK & build system |
-| React Native | 0.83.2 | Mobile UI framework |
+| Expo | ~55.0.5 | Core SDK and build system |
+| React Native | 0.83.2 | Mobile/web UI framework |
 | React | 19.2.0 | UI library |
 | TypeScript | ~5.9.2 | Type safety |
 | Expo Router | ~55.0.5 | File-based routing |
 | AWS Cognito | ^6.3.16 | Authentication |
 
-**Key Dependencies**: `amazon-cognito-identity-js` (User auth), `@react-native-async-storage` (Local storage), `expo-crypto` (Cryptographic functions), `expo-linking` (Deep linking), `expo-status-bar` (Status bar management)
+Key dependencies include `amazon-cognito-identity-js`, `@react-native-async-storage/async-storage`, `expo-crypto`, `expo-linking`, and `expo-status-bar`.
 
-### Backend (Planned/Partially Implemented)
+### Backend
 
 | Technology | Status | Purpose |
 |------------|--------|---------|
-| Python/Flask | Planned | API server |
-| DynamoDB | Planned | Database |
-| AWS Lambda | Possible | Serverless functions |
-| AWS Cognito | Active | Authentication (us-east-1) |
+| AWS API Gateway | Active | Public HTTP API routes |
+| AWS Lambda | Active/partially implemented | Python backend functions |
+| DynamoDB | Active/partially implemented | Catch and fish-data storage |
+| AWS Cognito | Active | User authentication |
+| Flask | Not current direction | Earlier plan; current backend work is Lambda/API Gateway |
+
+The active API Gateway base URL used in frontend hooks/services is:
+
+```text
+https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com
+```
 
 ## Project Architecture
 
-**Pattern**: MVC-like structure with clear separation of concerns
+The frontend uses an MVC-like structure:
 
-### Frontend Directory Structure (`/frontend/`)
+- `frontend/app/` contains Expo Router route entry files.
+- `frontend/pages/` contains screen/controller implementations.
+- `frontend/components/` contains reusable UI and feature components.
+- `frontend/hooks/` contains data-fetching and screen logic hooks.
+- `frontend/services/` contains API/service boundaries.
+- `frontend/lib/` and `frontend/constants/` contain Cognito setup and constants.
 
-```
-frontend/
-├── app/                    # Expo Router pages (file-based routing)
-│   ├── _layout.tsx         # Root layout with navigation header
-│   ├── index.tsx           # Entry point (loading + session check)
-│   ├── login.tsx           # Auth: Login page
-│   ├── signup.tsx          # Auth: Signup page
-│   ├── confirm.tsx         # Auth: Email confirmation
-│   ├── resetpassword.tsx   # Auth: Password reset
-│   ├── home.tsx            # Main: Dashboard (blank placeholder)
-│   ├── fishdata.tsx        # Main: Fish information (blank placeholder)
-│   ├── mycatches.tsx       # Main: User's catch log (blank placeholder)
-│   ├── spotsmap.tsx        # Main: Map of fishing spots (blank placeholder)
-│   └── community.tsx       # Main: Social/community (blank placeholder)
-│
-├── pages/                  # Screen controllers (MVC "Controller")
-│   ├── index.tsx           # Session check controller
-│   ├── login.tsx           # Login screen controller
-│   ├── signup.tsx          # Signup screen controller
-│   ├── confirm.tsx         # Confirmation controller
-│   ├── resetpassword.tsx   # Password reset controller
-│   ├── home.tsx            # Home screen controller
-│   ├── fishdata.tsx        # Fish data controller
-│   ├── mycatches.tsx       # My catches controller
-│   ├── spotsmap.tsx        # Spots map controller
-│   └── community.tsx       # Community controller
-│
-├── components/
-│   ├── index.ts            # Barrel export
-│   ├── ui/                 # Reusable UI components (Button.tsx, Input.tsx, Title.tsx, ErrorMessage.tsx, AuthFooter.tsx, Link.tsx)
-│   └── views/              # Screen view components (LoginView.tsx, SignupView.tsx, ConfirmView.tsx, ResetPasswordView.tsx, LoadingView.tsx)
-│
-├── hooks/                  # Custom React hooks (useSession.ts, useLogin.ts, useSignup.ts, useConfirm.ts, useResetPassword.ts)
-│
-├── services/               # Business logic / API calls (auth.ts - AWS Cognito)
-│
-├── lib/                    # Library/utility code (cognito.ts)
-│
-├── constants/              # Constants (cognito.ts)
-│
-└── assets/                 # Images & icons
+Backend Lambda code currently lives in `backend/`.
+
+Important backend files:
+
+```text
+backend/catches_lambda.py  # Catch CRUD/community Lambda handler
+backend/top-bait.py        # Existing top-bait Lambda
 ```
 
-### TypeScript Path Aliases
+## Current Routes
+
+### Frontend Routes
+
+Expo Router routes:
+
+```text
+/                 Loading/session entry
+/login            Login
+/signup           Signup
+/confirm          Email confirmation
+/resetpassword    Password reset
+/home             Dashboard/home
+/fishdata         Fish data tools
+/mycatches        Personal catch log
+/spotsmap         Spots map
+/community        Community feed
+```
+
+### API Gateway Routes
+
+Existing fish-data hooks call routes such as:
+
+```text
+/bestTime
+/top-bait
+/topLocations
+```
+
+Catch/community routes point to the same Lambda handler, `catches_lambda.lambda_handler`:
+
+```text
+POST    /catches
+GET     /catches/mine
+GET     /catches/community
+POST    /catches/{catchId}/community
+OPTIONS /catches
+OPTIONS /catches/mine
+OPTIONS /catches/community
+OPTIONS /catches/{catchId}/community
+```
+
+All `OPTIONS` routes must have no authorization so browser CORS preflight succeeds.
+
+## Catches Feature
+
+### Frontend
+
+- `frontend/services/catches.ts` is the API boundary for catch-related frontend work.
+- `frontend/pages/mycatches.tsx` creates personal catches through `catchesService`.
+- `frontend/pages/community.tsx` reads shared catches through `catchesService`.
+- `frontend/components/community/Card.tsx` renders community catch cards.
+- `catchesService` currently caches `myCatches` and `communityCatches` in memory to avoid repeated API calls during navigation.
+- Temporary test headers are still used:
+
+```text
+X-User-Id: user-001
+X-User-Name: Thomas
+```
+
+These should later be replaced with a Cognito `Authorization: Bearer <idToken>` header.
+
+### Backend
+
+`backend/catches_lambda.py` supports:
+
+- creating catches
+- listing catches for the current user
+- listing community catches
+- marking a catch as shared to community
+
+DynamoDB table:
+
+```text
+Table name: FinFinder
+Partition key: Username
+Sort key: Catch#
+```
+
+The Lambda currently writes catch sort-key values like:
+
+```text
+CATCH#<uuid>
+```
+
+Community catches currently use `Scan` unless a GSI is configured. Recommended future GSI:
+
+```text
+communityPk
+communitySk
+```
+
+Then set Lambda env var:
+
+```text
+COMMUNITY_INDEX_NAME=<gsi-name>
+```
+
+Required Lambda env var:
+
+```text
+CATCHES_TABLE_NAME=FinFinder
+```
+
+Required Lambda role permissions:
+
+```text
+dynamodb:GetItem
+dynamodb:PutItem
+dynamodb:UpdateItem
+dynamodb:Query
+dynamodb:Scan
+```
+
+on:
+
+```text
+arn:aws:dynamodb:us-east-1:283111850741:table/FinFinder
+arn:aws:dynamodb:us-east-1:283111850741:table/FinFinder/index/*
+```
+
+## Authentication
+
+- Cognito User Pool: `us-east-1_WqzoJUEau`
+- `frontend/services/auth.ts` handles login, signup, confirmation, password reset, session checks, and logout.
+- `useSession` checks auth state and redirects unauthenticated users.
+- Catch API calls currently use temporary test headers. A future step is adding a service helper for the current Cognito ID token and sending it to API Gateway.
+
+## TypeScript Path Aliases
+
+Configured in `frontend/tsconfig.json`:
 
 ```json
 {
@@ -94,118 +202,76 @@ frontend/
 }
 ```
 
-**Always use path aliases** instead of relative imports (e.g., `import Button from '@components/ui/Button'` not `import Button from '../components/ui/Button'`).
-
-## GitHub Workflow
-
-### Branch Strategy
-
-- **main**: Production branch - PRs required, protected
-- **develop**: Integration branch - PRs required, protected
-- **feature branches**: Branch off `develop`, merge back via PR
-
-### Current Branches
-- `main` - Production
-- `develop` - Active development
-- `communityPage` - Current feature branch
-
-### AI Assistant Guidelines
-- Create feature branches off `develop` for new work
-- Never commit directly to `main` or `develop`
-- **NEVER commit to GitHub - only the user should commit changes**
-- No CI/CD pipeline currently in place
-- Always check git status before operations
+Prefer path aliases for new code when it fits local conventions. Some existing files still use relative imports, especially page-to-service/component imports.
 
 ## Development Status
 
-### Completed
-- Authentication system (AWS Cognito) - fully functional
-- Navigation structure with custom header
-- MVC-like architecture established
-- UI component library
-- All page placeholders created
+### Completed / Working
 
-### In Progress / Todo
-- Implement main app screens (currently blank placeholders): `fishdata.tsx` (Fish information database), `mycatches.tsx` (Personal catch tracking), `spotsmap.tsx` (Fishing locations map), `community.tsx` (Social features)
-- Backend API (Flask + DynamoDB)
-- Responsive design for mobile + desktop views
+- Cognito auth flow
+- Navigation shell with custom header
+- Fish-data API hooks for best time, top bait, and popular locations
+- My Catches form and catch list
+- Community page/card grid
+- Catch sharing flow from My Catches to Community
+- API Gateway/Lambda/DynamoDB catch path is connected
+- Catches frontend service includes in-memory caching
+
+### In Progress / Needs Follow-Up
+
+- Replace temporary catch headers with Cognito auth token.
+- Add loading/error polish to API-backed screens.
+- Move hardcoded API base URLs into config/env.
+- Add a DynamoDB GSI for community catches to avoid scans.
+- Continue improving responsive design for mobile and desktop.
+- Build out `spotsmap` and any remaining dashboard/fish-data polish.
 
 ## AI Assistant Instructions
 
 ### Code Style & Patterns
 
-1. **Follow existing conventions**: Match current code style, naming patterns, and architecture
-2. **Use path aliases**: Always import via `@components`, `@hooks`, `@services`, etc.
-3. **MVC structure**: Keep logic in hooks/services, views in components/views, routing in app/
-4. **TypeScript**: Use strict typing, avoid `any`
-5. **React Native**: Use components from `react-native`, style with StyleSheet
+1. Follow existing conventions and keep changes scoped.
+2. Keep API interaction inside `frontend/services/` or purpose-built hooks.
+3. Keep DynamoDB access in backend Lambda/Python, never directly in frontend code.
+4. Use TypeScript types for shared API shapes; avoid `any`.
+5. Use React Native components and `StyleSheet` for frontend UI.
+6. Do not commit changes; the user handles commits.
+7. Always check `git status` before broad edits.
 
-### Preferred Assistance Mode
+### Commands To Run
 
-**Guidance over full implementation**: When implementing new features:
-- Provide function signatures with JSDoc/type comments
-- Include TODO comments explaining what logic is needed
-- Create empty scaffold with clear implementation steps
-- Let the developer fill in the details
+Before handing off frontend changes:
 
-Example:
-```typescript
-// TODO: Fetch fish data from backend API
-// Expected endpoint: GET /api/fish
-// Expected response: FishData[] with fields: id, name, species, description, imageUrl
-const fetchFishData = async (): Promise<FishData[]> => {
-  // Implementation goes here
-  return [];
-};
+```bash
+cd frontend
+npx tsc --noEmit
 ```
 
-### Commands to Run
+For Python Lambda syntax checks:
 
-**Before committing**:
 ```bash
-# TypeScript type checking
-npx tsc --noEmit
+python3 -m py_compile backend/catches_lambda.py
+```
 
-# Start development server
+To run the Expo app:
+
+```bash
+cd frontend
 npx expo start
 ```
 
-### Navigation Structure
+## Working Directories
 
-- App uses Expo Router file-based routing
-- Route structure: `/` (Loading/entry), `/login` (Login), `/signup` (Signup), `/confirm` (Email confirmation), `/resetpassword` (Password reset), `/home` (Dashboard), `/fishdata` (Fish database), `/mycatches` (User's catches), `/spotsmap` (Map view), `/community` (Community features)
+Frontend work:
 
-### Authentication
+```text
+/Users/thomasweaver/Documents/school/25-26/26Winter/seniorProject/FinFinder/frontend/
+```
 
-- AWS Cognito User Pool: us-east-1_WqzoJUEau
-- Always check session state using `useSession` hook
-- Protected routes should redirect to `/login` if unauthenticated
-- Auth tokens stored in AsyncStorage
+Backend work:
 
-## External APIs (To Be Populated)
+```text
+/Users/thomasweaver/Documents/school/25-26/26Winter/seniorProject/FinFinder/backend/
+```
 
-| Service | Purpose | Status |
-|---------|---------|--------|
-| [TBD] | Map rendering (Google Maps/Mapbox) | Planned |
-| [TBD] | Weather data for fishing conditions | Planned |
-| [TBD] | Fish species database | Planned |
-| Backend API | Flask API for fish/catches data | Planned |
-
-**Note**: Add API keys and credentials to environment variables, never hardcode them.
-
-## Priority Features (Post-Auth)
-
-Current priority is implementing the four main application screens to work together with responsive design:
-
-1. **FishData** - Browse/search fish species database
-2. **MyCatches** - Log and view personal fishing catches
-3. **SpotsMap** - Interactive map showing fishing locations
-4. **Community** - Social features, sharing catches, discussions
-
-## Working Directory
-
-All frontend work happens in `/Users/thomasweaver/Documents/school/25-26/26Winter/seniorProject/FinFinder/frontend/`
-
-Backend work happens in `/Users/thomasweaver/Documents/school/25-26/26Winter/seniorProject/FinFinder/backend/`
-
-*Last updated: April 13, 2026*
+*Last updated: May 12, 2026*
