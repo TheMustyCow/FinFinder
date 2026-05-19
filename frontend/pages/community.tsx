@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { useState, useRef, useEffect } from 'react';
 import Card from '../components/community/Card';
+import CatchDetailModal from '../components/catches/CatchDetailModal';
 import { catchesService, type Catch } from '../services/catches';
 
 export default function CommunityScreen() {
     const [catches, setCatches] = useState<Catch[]>([]);
     const [loadError, setLoadError] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
+    const [selectedCatch, setSelectedCatch] = useState<Catch | null>(null);
     const cardsPerPage = 18;
     const totalPages = Math.max(1, Math.ceil(catches.length / cardsPerPage));
     const scrollViewRef = useRef<ScrollView>(null);
@@ -62,6 +64,7 @@ export default function CommunityScreen() {
                                 <Card
                                     key={catchData.id}
                                     catchData={catchData}
+                                    onPress={() => setSelectedCatch(catchData)}
                                 />
                             ))}
                         </View>
@@ -90,6 +93,10 @@ export default function CommunityScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+            <CatchDetailModal
+                catchData={selectedCatch}
+                onClose={() => setSelectedCatch(null)}
+            />
         </SafeAreaView>
     );
 }

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable } from 'react-native';
+import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable, type GestureResponderEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CatchDetailModal from '../components/catches/CatchDetailModal';
 import { catchesService, type Catch } from '../services/catches';
 
 export default function MyCatches() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [hoveredPublishedCatchId, setHoveredPublishedCatchId] = useState<string | null>(null);
+    const [selectedCatch, setSelectedCatch] = useState<Catch | null>(null);
     const publishedHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [fish, setFish] = useState('');
@@ -57,6 +59,11 @@ export default function MyCatches() {
         if (!result.success) {
             Alert.alert('Unable to share catch', result.error ?? 'Please try again.');
         }
+    };
+
+    const shareCatchFromCard = (event: GestureResponderEvent, catchId: string) => {
+        event.stopPropagation();
+        shareCatchToCommunity(catchId);
     };
 
     const showPublishedTooltip = (catchId: string) => {
@@ -165,7 +172,12 @@ export default function MyCatches() {
                     ) : catches.length > 0 ? (
                         <View style={styles.grid}>
                             {catches.map((item) => (
-                                <View key={item.id} style={styles.card}>
+                                <Pressable
+                                    key={item.id}
+                                    accessibilityRole="button"
+                                    onPress={() => setSelectedCatch(item)}
+                                    style={styles.card}
+                                >
                                     <View style={styles.cardHeader}>
                                         <View style={styles.cardHeaderText}>
                                             <Text style={styles.fish} numberOfLines={1}>{item.fish}</Text>
@@ -220,14 +232,14 @@ export default function MyCatches() {
                                             {!item.isPostedToCommunity && (
                                                 <TouchableOpacity
                                                     style={styles.shareButton}
-                                                    onPress={() => shareCatchToCommunity(item.id)}
+                                                    onPress={(event) => shareCatchFromCard(event, item.id)}
                                                 >
                                                     <Text style={styles.shareButtonText}>Share to Community</Text>
                                                 </TouchableOpacity>
                                             )}
                                         </View>
                                     </View>
-                                </View>
+                                </Pressable>
                             ))}
                         </View>
                     ) : (
@@ -328,6 +340,10 @@ export default function MyCatches() {
                     </View>
                 </View>
             </Modal>
+            <CatchDetailModal
+                catchData={selectedCatch}
+                onClose={() => setSelectedCatch(null)}
+            />
         </SafeAreaView>
     );
 }

@@ -1,13 +1,14 @@
 // components/community/Card.tsx
-import { View, Text, StyleSheet } from 'react-native';
+import { Pressable, View, Text, StyleSheet } from 'react-native';
 import type { Catch } from '../../services/catches';
 
 interface CardProps {
     catchData: Catch;
     variant?: 'grid' | 'preview';
+    onPress?: () => void;
 }
 
-export default function Card({ catchData, variant = 'grid' }: CardProps) {
+export default function Card({ catchData, variant = 'grid', onPress }: CardProps) {
     const formattedDate = new Date(`${catchData.date}T00:00:00`).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -15,7 +16,11 @@ export default function Card({ catchData, variant = 'grid' }: CardProps) {
     });
 
     return (
-        <View style={[styles.card, variant === 'preview' && styles.previewCard]}>
+        <Pressable
+            accessibilityRole={onPress ? 'button' : undefined}
+            onPress={onPress}
+            style={[styles.card, variant === 'preview' && styles.previewCard]}
+        >
             <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle} numberOfLines={1}>{catchData.fish}</Text>
                 <Text style={styles.authorText} numberOfLines={1}>
@@ -37,7 +42,7 @@ export default function Card({ catchData, variant = 'grid' }: CardProps) {
                     {catchData.desc}
                 </Text>
             </View>
-        </View>
+        </Pressable>
     );
 }
 
