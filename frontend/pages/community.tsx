@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import { useState, useRef, useEffect } from 'react';
 import Card from '../components/community/Card';
 import CatchDetailModal from '../components/catches/CatchDetailModal';
+import { ImageGridBackground } from '../components/ui/ImageGridBackground';
 import { catchesService, type Catch } from '../services/catches';
 
 export default function CommunityScreen() {
@@ -47,52 +48,55 @@ export default function CommunityScreen() {
             <View style={styles.header}>
                 <Text style={styles.title}>Community</Text>
             </View>
-            <View style={styles.contentContainer}>
-                <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {loadError ? (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyTitle}>Unable to load community catches</Text>
-                            <Text style={styles.emptyText}>{loadError}</Text>
-                        </View>
-                    ) : currentCatches.length > 0 ? (
-                        <View style={styles.grid}>
-                            {currentCatches.map((catchData) => (
-                                <Card
-                                    key={catchData.id}
-                                    catchData={catchData}
-                                    onPress={() => setSelectedCatch(catchData)}
-                                />
-                            ))}
-                        </View>
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyTitle}>No community catches yet</Text>
-                            <Text style={styles.emptyText}>Post one from My Catches to start the feed.</Text>
-                        </View>
-                    )}
-                </ScrollView>
-                <View style={styles.pagination}>
-                    <TouchableOpacity
-                        style={[styles.button, currentPage === 0 && styles.buttonDisabled]}
-                        onPress={() => setCurrentPage(p => Math.max(0, p - 1))}
-                        disabled={currentPage === 0}
+
+            <ImageGridBackground>
+                <View style={styles.contentContainer}>
+                    <ScrollView
+                        ref={scrollViewRef}
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
                     >
-                        <Text style={styles.buttonText}>Previous</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.pageIndicator}>Page {currentPage + 1} of {totalPages}</Text>
-                    <TouchableOpacity
-                        style={[styles.button, currentPage === totalPages - 1 && styles.buttonDisabled]}
-                        onPress={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={currentPage === totalPages - 1}
-                    >
-                        <Text style={styles.buttonText}>Next</Text>
-                    </TouchableOpacity>
+                        {loadError ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>Unable to load community catches</Text>
+                                <Text style={styles.emptyText}>{loadError}</Text>
+                            </View>
+                        ) : currentCatches.length > 0 ? (
+                            <View style={styles.grid}>
+                                {currentCatches.map((catchData) => (
+                                    <Card
+                                        key={catchData.id}
+                                        catchData={catchData}
+                                        onPress={() => setSelectedCatch(catchData)}
+                                    />
+                                ))}
+                            </View>
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>No community catches yet</Text>
+                                <Text style={styles.emptyText}>Post one from My Catches to start the feed.</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                    <View style={styles.pagination}>
+                        <TouchableOpacity
+                            style={[styles.button, currentPage === 0 && styles.buttonDisabled]}
+                            onPress={() => setCurrentPage(p => Math.max(0, p - 1))}
+                            disabled={currentPage === 0}
+                        >
+                            <Text style={styles.buttonText}>Previous</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.pageIndicator}>Page {currentPage + 1} of {totalPages}</Text>
+                        <TouchableOpacity
+                            style={[styles.button, currentPage === totalPages - 1 && styles.buttonDisabled]}
+                            onPress={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={currentPage === totalPages - 1}
+                        >
+                            <Text style={styles.buttonText}>Next</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
+            </ImageGridBackground>
             <CatchDetailModal
                 catchData={selectedCatch}
                 onClose={() => setSelectedCatch(null)}
@@ -104,7 +108,7 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#0f172a',
     },
     header: {
         backgroundColor: 'white',

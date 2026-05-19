@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable, type GestureResponderEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CatchDetailModal from '../components/catches/CatchDetailModal';
+import { ImageGridBackground } from '../components/ui/ImageGridBackground';
 import { catchesService, type Catch } from '../services/catches';
 
 export default function MyCatches() {
@@ -146,110 +147,112 @@ export default function MyCatches() {
                 <Text style={styles.title}>My Catches</Text>
             </View>
 
-            <View style={styles.contentContainer}>
-                <View style={styles.toolbar}>
-                    <View>
-                        <Text style={styles.sectionTitle}>Catch Log</Text>
-                        <Text style={styles.sectionSubtitle}>{catches.length} saved {catches.length === 1 ? 'catch' : 'catches'}</Text>
-                    </View>
-                    <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => setModalVisible(true)}
-                    >
-                        <Text style={styles.addButtonText}>Add Catch</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {loadError ? (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyTitle}>Unable to load catches</Text>
-                            <Text style={styles.emptyText}>{loadError}</Text>
+            <ImageGridBackground>
+                <View style={styles.contentContainer}>
+                    <View style={styles.toolbar}>
+                        <View>
+                            <Text style={styles.sectionTitle}>Catch Log</Text>
+                            <Text style={styles.sectionSubtitle}>{catches.length} saved {catches.length === 1 ? 'catch' : 'catches'}</Text>
                         </View>
-                    ) : catches.length > 0 ? (
-                        <View style={styles.grid}>
-                            {catches.map((item) => (
-                                <Pressable
-                                    key={item.id}
-                                    accessibilityRole="button"
-                                    onPress={() => setSelectedCatch(item)}
-                                    style={styles.card}
-                                >
-                                    <View style={styles.cardHeader}>
-                                        <View style={styles.cardHeaderText}>
-                                            <Text style={styles.fish} numberOfLines={1}>{item.fish}</Text>
-                                            <Text style={styles.dateText}>{formatDate(item.date)}</Text>
-                                        </View>
-                                        {item.isPostedToCommunity && (
-                                            <Pressable
-                                                accessibilityLabel="Published to Community"
-                                                onHoverIn={() => showPublishedTooltip(item.id)}
-                                                onHoverOut={hidePublishedTooltip}
-                                                style={styles.publishedLogoWrap}
-                                            >
-                                                <View style={styles.publishedLogo}>
-                                                    <View style={styles.publishedLogoDot} />
-                                                </View>
-                                                {hoveredPublishedCatchId === item.id && (
-                                                    <View style={styles.publishedTooltip}>
-                                                        <Text style={styles.publishedTooltipText}>Shared with community</Text>
-                                                    </View>
-                                                )}
-                                            </Pressable>
-                                        )}
-                                    </View>
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => setModalVisible(true)}
+                        >
+                            <Text style={styles.addButtonText}>Add Catch</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                                    <View style={styles.cardBody}>
-                                        <View style={styles.cardContent}>
-                                            <View style={styles.detailGrid}>
-                                                <View style={styles.detailItem}>
-                                                    <Text style={styles.detailLabel}>Location</Text>
-                                                    <Text style={styles.detailValue} numberOfLines={1}>{item.location}</Text>
-                                                </View>
-                                                <View style={styles.detailItem}>
-                                                    <Text style={styles.detailLabel}>Weight</Text>
-                                                    <Text style={styles.detailValue}>{item.weight} lbs</Text>
-                                                </View>
-                                                <View style={styles.detailItem}>
-                                                    <Text style={styles.detailLabel}>Length</Text>
-                                                    <Text style={styles.detailValue}>{item.length} in</Text>
-                                                </View>
-                                                {!!item.bait && (
-                                                    <View style={styles.detailItem}>
-                                                        <Text style={styles.detailLabel}>Bait</Text>
-                                                        <Text style={styles.detailValue} numberOfLines={1}>{item.bait}</Text>
-                                                    </View>
-                                                )}
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        {loadError ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>Unable to load catches</Text>
+                                <Text style={styles.emptyText}>{loadError}</Text>
+                            </View>
+                        ) : catches.length > 0 ? (
+                            <View style={styles.grid}>
+                                {catches.map((item) => (
+                                    <Pressable
+                                        key={item.id}
+                                        accessibilityRole="button"
+                                        onPress={() => setSelectedCatch(item)}
+                                        style={styles.card}
+                                    >
+                                        <View style={styles.cardHeader}>
+                                            <View style={styles.cardHeaderText}>
+                                                <Text style={styles.fish} numberOfLines={1}>{item.fish}</Text>
+                                                <Text style={styles.dateText}>{formatDate(item.date)}</Text>
                                             </View>
-
-                                            {!!item.desc && <Text style={styles.notes} numberOfLines={2}>{item.desc}</Text>}
-                                        </View>
-
-                                        <View style={styles.actionArea}>
-                                            {!item.isPostedToCommunity && (
-                                                <TouchableOpacity
-                                                    style={styles.shareButton}
-                                                    onPress={(event) => shareCatchFromCard(event, item.id)}
+                                            {item.isPostedToCommunity && (
+                                                <Pressable
+                                                    accessibilityLabel="Published to Community"
+                                                    onHoverIn={() => showPublishedTooltip(item.id)}
+                                                    onHoverOut={hidePublishedTooltip}
+                                                    style={styles.publishedLogoWrap}
                                                 >
-                                                    <Text style={styles.shareButtonText}>Share to Community</Text>
-                                                </TouchableOpacity>
+                                                    <View style={styles.publishedLogo}>
+                                                        <View style={styles.publishedLogoDot} />
+                                                    </View>
+                                                    {hoveredPublishedCatchId === item.id && (
+                                                        <View style={styles.publishedTooltip}>
+                                                            <Text style={styles.publishedTooltipText}>Shared with community</Text>
+                                                        </View>
+                                                    )}
+                                                </Pressable>
                                             )}
                                         </View>
-                                    </View>
-                                </Pressable>
-                            ))}
-                        </View>
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyTitle}>No catches saved yet</Text>
-                            <Text style={styles.emptyText}>Add your first catch to start building your log.</Text>
-                        </View>
-                    )}
-                </ScrollView>
-            </View>
+
+                                        <View style={styles.cardBody}>
+                                            <View style={styles.cardContent}>
+                                                <View style={styles.detailGrid}>
+                                                    <View style={styles.detailItem}>
+                                                        <Text style={styles.detailLabel}>Location</Text>
+                                                        <Text style={styles.detailValue} numberOfLines={1}>{item.location}</Text>
+                                                    </View>
+                                                    <View style={styles.detailItem}>
+                                                        <Text style={styles.detailLabel}>Weight</Text>
+                                                        <Text style={styles.detailValue}>{item.weight} lbs</Text>
+                                                    </View>
+                                                    <View style={styles.detailItem}>
+                                                        <Text style={styles.detailLabel}>Length</Text>
+                                                        <Text style={styles.detailValue}>{item.length} in</Text>
+                                                    </View>
+                                                    {!!item.bait && (
+                                                        <View style={styles.detailItem}>
+                                                            <Text style={styles.detailLabel}>Bait</Text>
+                                                            <Text style={styles.detailValue} numberOfLines={1}>{item.bait}</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+
+                                                {!!item.desc && <Text style={styles.notes} numberOfLines={2}>{item.desc}</Text>}
+                                            </View>
+
+                                            <View style={styles.actionArea}>
+                                                {!item.isPostedToCommunity && (
+                                                    <TouchableOpacity
+                                                        style={styles.shareButton}
+                                                        onPress={(event) => shareCatchFromCard(event, item.id)}
+                                                    >
+                                                        <Text style={styles.shareButtonText}>Share to Community</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>No catches saved yet</Text>
+                                <Text style={styles.emptyText}>Add your first catch to start building your log.</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                </View>
+            </ImageGridBackground>
 
             {/* MODAL */}
             <Modal
@@ -351,7 +354,7 @@ export default function MyCatches() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#0f172a',
     },
     header: {
         backgroundColor: 'white',

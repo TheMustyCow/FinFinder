@@ -1,9 +1,7 @@
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-
-const loginBackground = require('../../assets/loginBackgroundImage.jpg');
-const backgroundTiles = Array.from({ length: 9 });
+import { ImageGridBackground } from '../ui/ImageGridBackground';
 
 //A function that implements this interface must have parameters with these names and types.
 interface LoginViewProps {
@@ -35,20 +33,7 @@ export function LoginView({
                 <Text style={styles.headerTitle}>Fin Finder</Text>
             </View>
 
-            <View style={styles.backgroundStage}>
-                <View style={styles.backgroundTileGrid} pointerEvents="none">
-                    {backgroundTiles.map((_, index) => (
-                        <Image
-                            key={index}
-                            source={loginBackground}
-                            resizeMode="cover"
-                            blurRadius={1}
-                            style={styles.backgroundTile}
-                        />
-                    ))}
-                </View>
-                <View style={styles.backgroundOverlay} />
-
+            <ImageGridBackground scale={1.75}>
                 <KeyboardAvoidingView
                     style={styles.keyboardView}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -111,7 +96,7 @@ export function LoginView({
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
-            </View>
+            </ImageGridBackground>
         </SafeAreaView>
     );
 }
@@ -135,25 +120,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '600',
         textAlign: 'center',
-    },
-    backgroundStage: {
-        flex: 1,
-        backgroundColor: '#0f172a',
-        overflow: 'hidden',
-    },
-    backgroundTileGrid: {
-        ...StyleSheet.absoluteFillObject,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        transform: [{ scale: 1.75 }],
-    },
-    backgroundTile: {
-        width: '33.3334%',
-        height: '33.3334%',
-    },
-    backgroundOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(15, 23, 42, 0.28)',
     },
     keyboardView: {
         flex: 1,
