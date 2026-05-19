@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { catchesService, type Catch } from '../services/catches';
 
 export default function MyCatches() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [hoveredPublishedCatchId, setHoveredPublishedCatchId] = useState<string | null>(null);
+    const publishedHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [fish, setFish] = useState('');
     const [location, setLocation] = useState('');
@@ -20,6 +23,12 @@ export default function MyCatches() {
     useEffect(() => {
         loadCatches();
         return catchesService.subscribe(loadCatches);
+    }, []);
+
+    useEffect(() => () => {
+        if (publishedHoverTimerRef.current) {
+            clearTimeout(publishedHoverTimerRef.current);
+        }
     }, []);
 
     const loadCatches = async () => {
@@ -49,6 +58,40 @@ export default function MyCatches() {
             Alert.alert('Unable to share catch', result.error ?? 'Please try again.');
         }
     };
+
+    const showPublishedTooltip = (catchId: string) => {
+        if (publishedHoverTimerRef.current) {
+            clearTimeout(publishedHoverTimerRef.current);
+        }
+
+        publishedHoverTimerRef.current = setTimeout(() => {
+            setHoveredPublishedCatchId(catchId);
+        }, 500);
+    };
+
+    const hidePublishedTooltip = () => {
+        if (publishedHoverTimerRef.current) {
+            clearTimeout(publishedHoverTimerRef.current);
+            publishedHoverTimerRef.current = null;
+        }
+
+        setHoveredPublishedCatchId(null);
+    };
+
+    const formatDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+
+    const isFormValid = Boolean(
+        fish &&
+        location &&
+        weight &&
+        length &&
+        !Number.isNaN(Number(weight)) &&
+        !Number.isNaN(Number(length))
+    );
 
     const addCatch = async () => {
         const parsedWeight = Number(weight);
@@ -91,44 +134,110 @@ export default function MyCatches() {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+                <Text style={styles.title}>My Catches</Text>
+            </View>
 
-            {/* HEADER */}
-            <Text style={styles.title}>🎣 My Catches</Text>
-
-            {/* ADD BUTTON */}
-            <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => setModalVisible(true)}
-            >
-                <Text style={styles.addButtonText}>+ Add Catch</Text>
-            </TouchableOpacity>
-
-            {/* LIST */}
-            {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
-            <ScrollView>
-                {catches.map((item) => (
-                    <View key={item.id} style={styles.card}>
-                        <Text style={styles.fish}>🐟 {item.fish}</Text>
-
-                        <Text style={styles.text}>📍 {item.location}</Text>
-                        <Text style={styles.text}>⚖️ {item.weight} lbs</Text>
-                        <Text style={styles.text}>📏 {item.length} in</Text>
-                        {!!item.bait && <Text style={styles.text}>🪱 {item.bait}</Text>}
-                        {!!item.desc && <Text style={styles.text}>📝 {item.desc}</Text>}
-                        {item.isPostedToCommunity ? (
-                            <Text style={styles.sharedText}>Shared to Community</Text>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.shareButton}
-                                onPress={() => shareCatchToCommunity(item.id)}
-                            >
-                                <Text style={styles.shareButtonText}>Share to Community</Text>
-                            </TouchableOpacity>
-                        )}
+            <View style={styles.contentContainer}>
+                <View style={styles.toolbar}>
+                    <View>
+                        <Text style={styles.sectionTitle}>Catch Log</Text>
+                        <Text style={styles.sectionSubtitle}>{catches.length} saved {catches.length === 1 ? 'catch' : 'catches'}</Text>
                     </View>
-                ))}
-            </ScrollView>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => setModalVisible(true)}
+                    >
+                        <Text style={styles.addButtonText}>Add Catch</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {loadError ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyTitle}>Unable to load catches</Text>
+                            <Text style={styles.emptyText}>{loadError}</Text>
+                        </View>
+                    ) : catches.length > 0 ? (
+                        <View style={styles.grid}>
+                            {catches.map((item) => (
+                                <View key={item.id} style={styles.card}>
+                                    <View style={styles.cardHeader}>
+                                        <View style={styles.cardHeaderText}>
+                                            <Text style={styles.fish} numberOfLines={1}>{item.fish}</Text>
+                                            <Text style={styles.dateText}>{formatDate(item.date)}</Text>
+                                        </View>
+                                        {item.isPostedToCommunity && (
+                                            <Pressable
+                                                accessibilityLabel="Published to Community"
+                                                onHoverIn={() => showPublishedTooltip(item.id)}
+                                                onHoverOut={hidePublishedTooltip}
+                                                style={styles.publishedLogoWrap}
+                                            >
+                                                <View style={styles.publishedLogo}>
+                                                    <View style={styles.publishedLogoDot} />
+                                                </View>
+                                                {hoveredPublishedCatchId === item.id && (
+                                                    <View style={styles.publishedTooltip}>
+                                                        <Text style={styles.publishedTooltipText}>Shared with community</Text>
+                                                    </View>
+                                                )}
+                                            </Pressable>
+                                        )}
+                                    </View>
+
+                                    <View style={styles.cardBody}>
+                                        <View style={styles.cardContent}>
+                                            <View style={styles.detailGrid}>
+                                                <View style={styles.detailItem}>
+                                                    <Text style={styles.detailLabel}>Location</Text>
+                                                    <Text style={styles.detailValue} numberOfLines={1}>{item.location}</Text>
+                                                </View>
+                                                <View style={styles.detailItem}>
+                                                    <Text style={styles.detailLabel}>Weight</Text>
+                                                    <Text style={styles.detailValue}>{item.weight} lbs</Text>
+                                                </View>
+                                                <View style={styles.detailItem}>
+                                                    <Text style={styles.detailLabel}>Length</Text>
+                                                    <Text style={styles.detailValue}>{item.length} in</Text>
+                                                </View>
+                                                {!!item.bait && (
+                                                    <View style={styles.detailItem}>
+                                                        <Text style={styles.detailLabel}>Bait</Text>
+                                                        <Text style={styles.detailValue} numberOfLines={1}>{item.bait}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+
+                                            {!!item.desc && <Text style={styles.notes} numberOfLines={2}>{item.desc}</Text>}
+                                        </View>
+
+                                        <View style={styles.actionArea}>
+                                            {!item.isPostedToCommunity && (
+                                                <TouchableOpacity
+                                                    style={styles.shareButton}
+                                                    onPress={() => shareCatchToCommunity(item.id)}
+                                                >
+                                                    <Text style={styles.shareButtonText}>Share to Community</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyTitle}>No catches saved yet</Text>
+                            <Text style={styles.emptyText}>Add your first catch to start building your log.</Text>
+                        </View>
+                    )}
+                </ScrollView>
+            </View>
 
             {/* MODAL */}
             <Modal
@@ -137,14 +246,15 @@ export default function MyCatches() {
                 transparent={true}
             >
                 <View style={styles.modalOverlay}>
-
                     <View style={styles.modalContent}>
-
-                        <Text style={styles.modalTitle}>Add New Catch 🎣</Text>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Add New Catch</Text>
+                            <Text style={styles.modalSubtitle}>Record the details now and share it when you are ready.</Text>
+                        </View>
 
                         <TextInput
                             placeholder="Fish type"
-                            placeholderTextColor="#cbd5f5"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={fish}
                             onChangeText={setFish}
@@ -152,7 +262,7 @@ export default function MyCatches() {
 
                         <TextInput
                             placeholder="Location"
-                            placeholderTextColor="#cbd5f5"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={location}
                             onChangeText={setLocation}
@@ -160,7 +270,7 @@ export default function MyCatches() {
 
                         <TextInput
                             placeholder="Weight (lbs)"
-                            placeholderTextColor="#cbd5f5"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={weight}
                             onChangeText={setWeight}
@@ -169,7 +279,7 @@ export default function MyCatches() {
 
                         <TextInput
                             placeholder="Length (inches)"
-                            placeholderTextColor="#cbd5f5"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={length}
                             onChangeText={setLength}
@@ -178,7 +288,7 @@ export default function MyCatches() {
 
                         <TextInput
                             placeholder="Bait used"
-                            placeholderTextColor="#cbd5f5"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={bait}
                             onChangeText={setBait}
@@ -186,8 +296,8 @@ export default function MyCatches() {
 
                         <TextInput
                             placeholder="Notes (weather, location details, etc.)"
-                            placeholderTextColor="#cbd5f5"
-                            style={styles.input}
+                            placeholderTextColor="#94a3b8"
+                            style={[styles.input, styles.notesInput]}
                             value={notes}
                             onChangeText={setNotes}
                             multiline
@@ -198,17 +308,17 @@ export default function MyCatches() {
                             onPress={() => setPostToCommunity((value) => !value)}
                         >
                             <View style={[styles.checkbox, postToCommunity && styles.checkboxChecked]}>
-                                {postToCommunity && <Text style={styles.checkboxMark}>✓</Text>}
+                                {postToCommunity && <View style={styles.checkboxDot} />}
                             </View>
                             <Text style={styles.checkboxLabel}>Post to Community</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                            style={[styles.saveButton, (!isFormValid || isSaving) && styles.saveButtonDisabled]}
                             onPress={addCatch}
-                            disabled={isSaving}
+                            disabled={!isFormValid || isSaving}
                         >
-                            <Text style={styles.saveText}>{isSaving ? 'Saving...' : 'Save 🎣'}</Text>
+                            <Text style={styles.saveText}>{isSaving ? 'Saving...' : 'Save Catch'}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -216,170 +326,327 @@ export default function MyCatches() {
                         </TouchableOpacity>
 
                     </View>
-
                 </View>
             </Modal>
-
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-
-    container: {
+    safeArea: {
         flex: 1,
-        backgroundColor: '#f1f5f9',
-        padding: 16,
+        backgroundColor: '#f5f5f5',
     },
-
+    header: {
+        backgroundColor: 'white',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#1e293b',
+        fontSize: 20,
+        fontWeight: '600',
+        textAlign: 'center',
+        color: '#111827',
     },
-
-    addButton: {
-        backgroundColor: '#0ea5e9',
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 15,
+    contentContainer: {
+        flex: 1,
+        margin: 30,
+        marginHorizontal: 100,
+        marginTop: 30,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        overflow: 'hidden',
+        flexDirection: 'column',
+    },
+    toolbar: {
+        paddingVertical: 18,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-
+    sectionTitle: {
+        color: '#0f172a',
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    sectionSubtitle: {
+        color: '#64748b',
+        fontSize: 14,
+        marginTop: 3,
+    },
+    addButton: {
+        backgroundColor: '#005c87',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
     addButtonText: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '600',
+        fontSize: 14,
     },
-
-    card: {
-        backgroundColor: '#1e6f8b',
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
         padding: 15,
-        borderRadius: 12,
-        marginBottom: 10,
     },
-
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
+        columnGap: '2%',
+    },
+    card: {
+        width: '32%',
+        height: 300,
+        backgroundColor: '#ffffff',
+        borderRadius: 18,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#d7e2e8',
+        overflow: 'hidden',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 5,
+    },
+    cardHeader: {
+        backgroundColor: '#005c87',
+        paddingHorizontal: 18,
+        paddingTop: 12,
+        paddingBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    cardHeaderText: {
+        flex: 1,
+        paddingRight: 12,
+    },
+    publishedLogoWrap: {
+        position: 'relative',
+        zIndex: 2,
+    },
+    publishedLogo: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#e8f4f8',
+        borderWidth: 2,
+        borderColor: '#bdd8e3',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    publishedLogoDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#005c87',
+    },
+    publishedTooltip: {
+        position: 'absolute',
+        top: 34,
+        right: 0,
+        width: 156,
+        backgroundColor: '#0f172a',
+        borderRadius: 6,
+        paddingVertical: 7,
+        paddingHorizontal: 10,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.16,
+        shadowRadius: 10,
+    },
+    publishedTooltipText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    cardBody: {
+        flex: 1,
+        padding: 18,
+        paddingBottom: 16,
+        justifyContent: 'space-between',
+    },
+    cardContent: {
+        flexShrink: 1,
+    },
     fish: {
         color: '#fff',
+        fontSize: 20,
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    dateText: {
+        color: '#d9edf4',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    detailGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 14,
+    },
+    detailItem: {
+        width: '50%',
+        paddingRight: 12,
+        marginBottom: 14,
+    },
+    detailLabel: {
+        color: '#94a3b8',
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 3,
+        textTransform: 'uppercase',
+    },
+    detailValue: {
+        color: '#334155',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    notes: {
+        color: '#475569',
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    actionArea: {
+        minHeight: 42,
+        justifyContent: 'flex-end',
+    },
+    emptyState: {
+        minHeight: 360,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyTitle: {
+        color: '#0f172a',
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '700',
+        marginBottom: 6,
     },
-
-    text: {
-        color: '#cbd5f5',
-        marginTop: 2,
+    emptyText: {
+        color: '#64748b',
+        fontSize: 14,
+        textAlign: 'center',
     },
-
-    errorText: {
-        color: '#b91c1c',
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-
     modalContent: {
         width: '70%',
-        height: '70%',
+        maxWidth: 620,
         backgroundColor: '#ffffff',
-        borderRadius: 20,
-        padding: 20,
-        justifyContent: 'space-between',
+        borderRadius: 14,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: '#d7e2e8',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 18,
     },
-
+    modalHeader: {
+        marginBottom: 16,
+    },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#0ea5e9',
-        marginBottom: 10,
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#0f172a',
         textAlign: 'center',
     },
-
-    input: {
-        backgroundColor: '#155e75',
-        color: '#fff',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 10,
+    modalSubtitle: {
+        color: '#64748b',
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 6,
+        textAlign: 'center',
     },
-
+    input: {
+        backgroundColor: '#f8fafc',
+        color: '#0f172a',
+        paddingVertical: 11,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d7e2e8',
+        marginBottom: 10,
+        fontSize: 14,
+    },
+    notesInput: {
+        minHeight: 82,
+        textAlignVertical: 'top',
+    },
     checkboxRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10,
+        marginTop: 2,
+        marginBottom: 12,
     },
-
     checkbox: {
         width: 22,
         height: 22,
         borderRadius: 4,
         borderWidth: 2,
-        borderColor: '#0ea5e9',
+        borderColor: '#005c87',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 10,
     },
-
     checkboxChecked: {
-        backgroundColor: '#0ea5e9',
+        backgroundColor: '#005c87',
     },
-
-    checkboxMark: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-        lineHeight: 18,
+    checkboxDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 2,
+        backgroundColor: '#ffffff',
     },
-
     checkboxLabel: {
-        color: '#155e75',
-        fontWeight: 'bold',
+        color: '#334155',
+        fontWeight: '600',
     },
-
     saveButton: {
-        backgroundColor: '#0ea5e9',
-        padding: 12,
-        borderRadius: 10,
+        backgroundColor: '#005c87',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
         alignItems: 'center',
         marginTop: 5,
     },
-
     saveButtonDisabled: {
-        backgroundColor: '#94a3b8',
+        backgroundColor: '#cbd5e1',
     },
-
     saveText: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '700',
+        fontSize: 14,
     },
-
     shareButton: {
-        backgroundColor: '#0ea5e9',
-        padding: 10,
+        backgroundColor: '#005c87',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
         borderRadius: 8,
         alignItems: 'center',
-        marginTop: 10,
     },
-
     shareButtonText: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
-
-    sharedText: {
-        color: '#bbf7d0',
-        fontWeight: 'bold',
-        marginTop: 10,
-    },
-
     cancelText: {
-        color: '#9096ac',
+        color: '#64748b',
         textAlign: 'center',
-        marginTop: 10,
+        marginTop: 12,
+        fontWeight: '600',
     },
 });
