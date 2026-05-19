@@ -12,6 +12,12 @@ export interface AuthResult {
     error?: string;
 }
 
+export interface CurrentUser {
+    userId: string;
+    userName: string;
+    token: string;
+}
+
 export interface ResetPasswordParams {
     email: string;
     code: string;
@@ -130,6 +136,40 @@ export const authService = {
                 } else {
                     resolve({ success: false, error: err?.message });
                 }
+            });
+        });
+    },
+
+    async getCurrentUser(): Promise<CurrentUser> {
+        return new Promise((resolve, reject) => {
+            const currentUser = userPool.getCurrentUser();
+
+            if (!currentUser) {
+                reject(new Error('You must be signed in to manage catches'));
+                return;
+            }
+
+            currentUser.getSession((err: Error | null, session: any) => {
+                if (err || !session?.isValid()) {
+                    reject(new Error(err?.message || 'Your session has expired. Please sign in again.'));
+                    return;
+                }
+
+                const idToken = session.getIdToken();
+                const payload = idToken.decodePayload();
+                const userId = payload.sub ?? payload['cognito:username'] ?? currentUser.getUsername();
+                const userName =
+                    payload.name ??
+                    payload.preferred_username ??
+                    payload.email ??
+                    payload['cognito:username'] ??
+                    currentUser.getUsername();
+
+                resolve({
+                    userId,
+                    userName,
+                    token: idToken.getJwtToken(),
+                });
             });
         });
     },

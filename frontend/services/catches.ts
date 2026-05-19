@@ -1,3 +1,5 @@
+import { authService } from './auth';
+
 export interface Catch {
     id: string;
     fish: string;
@@ -22,23 +24,34 @@ export interface CreateCatchInput {
 }
 
 const API_BASE_URL = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com';
-const TEMP_USER_ID = 'user-001'; // TODO: Replace with Cognito Authorization header.
-const TEMP_USER_NAME = 'Thomas'; // TODO: Replace with Cognito user display name/email.
 
 type CatchesListener = () => void;
 const listeners = new Set<CatchesListener>();
 let myCatchesCache: Catch[] | null = null;
 let communityCatchesCache: Catch[] | null = null;
+let cacheUserId: string | null = null;
 
 const notifyListeners = () => {
     listeners.forEach((listener) => listener());
 };
 
-const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    'X-User-Id': TEMP_USER_ID,
-    'X-User-Name': TEMP_USER_NAME,
-});
+const getHeaders = async () => {
+    const currentUser = await authService.getCurrentUser();
+
+    if (cacheUserId && cacheUserId !== currentUser.userId) {
+        myCatchesCache = null;
+        communityCatchesCache = null;
+    }
+
+    cacheUserId = currentUser.userId;
+
+    return {
+        'Authorization': `Bearer ${currentUser.token}`,
+        'Content-Type': 'application/json',
+        'X-User-Id': currentUser.userId,
+        'X-User-Name': currentUser.userName,
+    };
+};
 
 const parseResponse = async <T>(response: Response): Promise<T> => {
     const body = await response.json().catch(() => null);
@@ -75,15 +88,18 @@ export const catchesService = {
     clearCache(): void {
         myCatchesCache = null;
         communityCatchesCache = null;
+        cacheUserId = null;
     },
 
     async getMyCatches(forceRefresh = false): Promise<Catch[]> {
+        const headers = await getHeaders();
+
         if (myCatchesCache && !forceRefresh) {
             return [...myCatchesCache];
         }
 
         const response = await fetch(`${API_BASE_URL}/catches/mine`, {
-            headers: getHeaders(),
+            headers,
         });
 
         myCatchesCache = await parseResponse<Catch[]>(response);
@@ -97,7 +113,7 @@ export const catchesService = {
     async createCatch(input: CreateCatchInput): Promise<Catch> {
         const response = await fetch(`${API_BASE_URL}/catches`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify(input),
         });
 
@@ -118,12 +134,14 @@ export const catchesService = {
      * Called by community.tsx to display cards
      */
     async getCommunityCatches(forceRefresh = false): Promise<Catch[]> {
+        const headers = await getHeaders();
+
         if (communityCatchesCache && !forceRefresh) {
             return [...communityCatchesCache];
         }
 
         const response = await fetch(`${API_BASE_URL}/catches/community`, {
-            headers: getHeaders(),
+            headers,
         });
 
         communityCatchesCache = await parseResponse<Catch[]>(response);
@@ -139,7 +157,7 @@ export const catchesService = {
         try {
             const response = await fetch(`${API_BASE_URL}/catches/${catchId}/community`, {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: await getHeaders(),
             });
 
             const updatedCatch = await parseResponse<Catch>(response);
