@@ -1,5 +1,9 @@
-import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { Button, Input, ErrorMessage, AuthFooter, Title, Link } from '../ui';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+
+const loginBackground = require('../../assets/loginBackgroundImage.jpg');
+const backgroundTiles = Array.from({ length: 9 });
 
 //A function that implements this interface must have parameters with these names and types.
 interface LoginViewProps {
@@ -23,46 +27,237 @@ export function LoginView({
     onLogin,
     onForgotPassword,
 }: LoginViewProps) {
+    const router = useRouter();
+
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <Title text="Fin Finder" subtitle="Sign in to start fishing!" />
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Fin Finder</Text>
+            </View>
 
-            <Input
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-            />
+            <View style={styles.backgroundStage}>
+                <View style={styles.backgroundTileGrid} pointerEvents="none">
+                    {backgroundTiles.map((_, index) => (
+                        <Image
+                            key={index}
+                            source={loginBackground}
+                            resizeMode="cover"
+                            blurRadius={1}
+                            style={styles.backgroundTile}
+                        />
+                    ))}
+                </View>
+                <View style={styles.backgroundOverlay} />
 
-            <Input
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
+                <KeyboardAvoidingView
+                    style={styles.keyboardView}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={styles.contentContainer}>
+                            <View style={styles.formContainer}>
+                                <Text style={styles.title}>Welcome</Text>
+                                <Text style={styles.subtitle}>Sign in to continue to your fishing dashboard.</Text>
 
-            <ErrorMessage message={error} />
+                                <Text style={styles.inputLabel}>Email</Text>
+                                <TextInput
+                                    placeholder="Email address"
+                                    placeholderTextColor="#94a3b8"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    style={styles.input}
+                                />
 
-            <Button onPress={onLogin} title="Log In" disabled={loading} loading={loading} />
+                                <Text style={styles.inputLabel}>Password</Text>
+                                <TextInput
+                                    placeholder="Password"
+                                    placeholderTextColor="#94a3b8"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry
+                                    style={styles.input}
+                                />
 
-            <AuthFooter
-                text="Don't have an account?"
-                linkText="Sign up"
-                linkPath="/signup"
-            />
+                                {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-            <Link text="Forgot password?" onPress={onForgotPassword} />
-        </KeyboardAvoidingView>
+                                <TouchableOpacity
+                                    style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                                    onPress={onLogin}
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <ActivityIndicator color="#ffffff" />
+                                    ) : (
+                                        <Text style={styles.loginButtonText}>Log In</Text>
+                                    )}
+                                </TouchableOpacity>
+
+                                <View style={styles.footerRow}>
+                                    <Text style={styles.footerText}>Don't have an account?</Text>
+                                    <TouchableOpacity onPress={() => router.push('/signup')}>
+                                        <Text style={styles.footerLink}>Sign up</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <TouchableOpacity onPress={onForgotPassword} style={styles.forgotButton}>
+                                    <Text style={styles.forgotText}>Forgot password?</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    header: {
+        backgroundColor: 'white',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        zIndex: 2,
+        elevation: 2,
+    },
+    headerTitle: {
+        color: '#111827',
+        fontSize: 20,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    backgroundStage: {
+        flex: 1,
+        backgroundColor: '#0f172a',
+        overflow: 'hidden',
+    },
+    backgroundTileGrid: {
+        ...StyleSheet.absoluteFillObject,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        transform: [{ scale: 1.75 }],
+    },
+    backgroundTile: {
+        width: '33.3334%',
+        height: '33.3334%',
+    },
+    backgroundOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 23, 42, 0.28)',
+    },
+    keyboardView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        padding: 30,
         justifyContent: 'center',
-        padding: 24,
+    },
+    contentContainer: {
+        width: '100%',
+        maxWidth: 620,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.82)',
+        overflow: 'hidden',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.24,
+        shadowRadius: 24,
+    },
+    formContainer: {
+        paddingVertical: 34,
+        paddingHorizontal: 42,
+    },
+    title: {
+        color: '#0f172a',
+        fontSize: 28,
+        fontWeight: '700',
+        textAlign: 'center',
+        marginBottom: 6,
+    },
+    subtitle: {
+        color: '#64748b',
+        fontSize: 15,
+        lineHeight: 22,
+        textAlign: 'center',
+        marginBottom: 28,
+    },
+    inputLabel: {
+        color: '#334155',
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 7,
+    },
+    input: {
+        backgroundColor: '#f8fafc',
+        color: '#0f172a',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d7e2e8',
+        marginBottom: 16,
+        fontSize: 15,
+    },
+    errorText: {
+        color: '#b91c1c',
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: 14,
+    },
+    loginButton: {
+        backgroundColor: '#005c87',
+        paddingVertical: 13,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 2,
+    },
+    loginButtonDisabled: {
+        backgroundColor: '#cbd5e1',
+    },
+    loginButtonText: {
+        color: '#ffffff',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    footerRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 18,
+    },
+    footerText: {
+        color: '#64748b',
+        fontSize: 14,
+        marginRight: 5,
+    },
+    footerLink: {
+        color: '#005c87',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    forgotButton: {
+        marginTop: 12,
+        alignItems: 'center',
+    },
+    forgotText: {
+        color: '#64748b',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
