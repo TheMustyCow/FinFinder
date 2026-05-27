@@ -45,12 +45,14 @@ const styles = StyleSheet.create({
         marginTop: 30,
         backgroundColor: 'white',
         borderRadius: 12,
-        overflow: 'hidden',
+        padding: 10,
         borderWidth: 1,
         borderColor: '#d7e2e8',
     },
     mapContainer: {
         flex: 1,
         backgroundColor: '#d7e2e8',
+        borderRadius: 8,
+        overflow: 'hidden',
     },
 });
