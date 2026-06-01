@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
@@ -12,6 +12,7 @@ type WeatherData = {
 };
 
 const conditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy'];
+const heroBannerImage = require('../assets/homeFishingBannerWide.png');
 
 const getTodaysDate = () => new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -37,8 +38,13 @@ export default function Home() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Fin Finder</Text>
+            <View style={styles.topBanner}>
+                <Image
+                    source={heroBannerImage}
+                    resizeMode="cover"
+                    style={styles.topBannerImage}
+                />
+                <View style={styles.topBannerOverlay} />
             </View>
 
             <ImageGridBackground>
@@ -111,17 +117,24 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#0f172a',
     },
-    header: {
-        backgroundColor: 'white',
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+    topBanner: {
+        height: 220,
+        width: '100%',
+        backgroundColor: '#0f2f34',
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    title: {
-        fontSize: 20,
-        fontWeight: '600',
-        textAlign: 'center',
+    topBannerImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+    },
+    topBannerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 23, 42, 0.18)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(15, 23, 42, 0.24)',
     },
     contentContainer: {
         flex: 1,
