@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import L from 'leaflet';
 import {
     MapContainer,
@@ -10,6 +11,7 @@ import {
 import 'leaflet/dist/leaflet.css';
 import type { MapWrapperProps } from './MapWrapper';
 import { catchesService, type Catch as LoggedCatch } from '../../services/catches';
+import { colors } from '../../constants/colors';
 
 const LeafletMapContainer = MapContainer as any;
 const LeafletMarker = Marker as any;
@@ -55,6 +57,141 @@ type GovLake = {
     name: string;
     lat: number;
     long: number;
+};
+
+const menuStyle: CSSProperties = {
+    position: 'absolute',
+    background: '#ffffff',
+    border: '1px solid #d7e2e8',
+    borderRadius: 8,
+    boxShadow: '0 12px 28px rgba(15, 23, 42, 0.18)',
+    overflow: 'hidden',
+    padding: 4,
+    minWidth: 150,
+    zIndex: 1000,
+};
+
+const menuButtonStyle: CSSProperties = {
+    width: '100%',
+    border: 0,
+    background: 'transparent',
+    color: colors.primaryText,
+    cursor: 'pointer',
+    display: 'block',
+    fontSize: 14,
+    fontWeight: 700,
+    lineHeight: '18px',
+    padding: '9px 11px',
+    textAlign: 'left',
+};
+
+const dangerMenuButtonStyle: CSSProperties = {
+    ...menuButtonStyle,
+    color: colors.dangerText,
+};
+
+const pinFormOverlayStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    background: colors.modalBackdrop,
+    display: 'flex',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 2000,
+};
+
+const pinFormStyle: CSSProperties = {
+    background: '#ffffff',
+    border: '1px solid #d7e2e8',
+    borderRadius: 12,
+    boxShadow: '0 18px 48px rgba(15, 23, 42, 0.24)',
+    maxWidth: 360,
+    padding: 20,
+    width: '100%',
+};
+
+const pinFormTitleStyle: CSSProperties = {
+    color: colors.primaryText,
+    fontSize: 20,
+    fontWeight: 800,
+    margin: '0 0 4px',
+};
+
+const pinFormSubtitleStyle: CSSProperties = {
+    color: '#64748b',
+    fontSize: 13,
+    lineHeight: '18px',
+    margin: '0 0 16px',
+};
+
+const pinInputStyle: CSSProperties = {
+    background: '#f8fafc',
+    border: '1px solid #d7e2e8',
+    borderRadius: 8,
+    boxSizing: 'border-box',
+    color: colors.primaryText,
+    display: 'block',
+    fontSize: 14,
+    fontWeight: 600,
+    marginBottom: 10,
+    outline: 'none',
+    padding: '11px 12px',
+    width: '100%',
+};
+
+const pinButtonRowStyle: CSSProperties = {
+    display: 'flex',
+    gap: 10,
+    marginTop: 14,
+};
+
+const primaryPinButtonStyle: CSSProperties = {
+    background: colors.primaryButtonBackground,
+    border: `1px solid ${colors.primaryButtonBorder}`,
+    borderRadius: 8,
+    color: '#ffffff',
+    cursor: 'pointer',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 800,
+    padding: '11px 14px',
+};
+
+const secondaryPinButtonStyle: CSSProperties = {
+    background: '#ffffff',
+    border: '1px solid #d7e2e8',
+    borderRadius: 8,
+    color: colors.primaryText,
+    cursor: 'pointer',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 800,
+    padding: '11px 14px',
+};
+
+const addCatchButtonStyle: CSSProperties = {
+    background: '#e8f4f8',
+    border: `1px solid ${colors.primaryButtonBorder}`,
+    borderRadius: 8,
+    color: colors.primaryButtonBackground,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 800,
+    marginTop: 4,
+    padding: '10px 12px',
+    width: '100%',
+};
+
+const queuedCatchStyle: CSSProperties = {
+    background: '#f8fafc',
+    border: '1px solid #d7e2e8',
+    borderRadius: 8,
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: 700,
+    marginTop: 8,
+    padding: '8px 10px',
 };
 
 /* Right-click handler */
@@ -104,6 +241,7 @@ export default function WebMap({
                                    selectedCoordinate,
                                    onSelectCoordinate,
                                }: MapWrapperProps) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const [pins, setPins] = useState<Pin[]>([]);
     const [mappedCatches, setMappedCatches] = useState<LoggedCatch[]>([]);
 
@@ -132,6 +270,22 @@ export default function WebMap({
         size: '',
         weight: '',
     });
+
+    const getMenuPosition = (event: MouseEvent) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+
+        if (!rect) {
+            return {
+                x: event.clientX,
+                y: event.clientY,
+            };
+        }
+
+        return {
+            x: Math.max(8, Math.min(event.clientX - rect.left, rect.width - 170)),
+            y: Math.max(8, Math.min(event.clientY - rect.top, rect.height - 120)),
+        };
+    };
 
     useEffect(() => {
         fetch('https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/govPin')
@@ -287,6 +441,7 @@ export default function WebMap({
 
     return (
         <div
+            ref={containerRef}
             style={{ height: '100%', width: '100%', position: 'relative' }}
             onClick={() => setMenu(null)}
         >
@@ -304,11 +459,13 @@ export default function WebMap({
                         longitude: lng,
                     })}
                     onRightClick={(lat, lng, e) => {
+                        const position = getMenuPosition(e);
+
                         setMenu({
                             lat,
                             lng,
-                            x: e.clientX,
-                            y: e.clientY,
+                            x: position.x,
+                            y: position.y,
                         });
                     }}
                 />
@@ -354,11 +511,13 @@ export default function WebMap({
                         eventHandlers={{
                             contextmenu: (e) => {
                                 e.originalEvent.preventDefault();
+                                const position = getMenuPosition(e.originalEvent);
+
                                 setMenu({
                                     lat: pin.lat,
                                     lng: pin.lng,
-                                    x: e.originalEvent.clientX,
-                                    y: e.originalEvent.clientY,
+                                    x: position.x,
+                                    y: position.y,
                                     pinId: pin.id,
                                 });
                             },
@@ -442,50 +601,49 @@ export default function WebMap({
             {menu && (
                 <div
                     style={{
-                        position: 'absolute',
+                        ...menuStyle,
                         top: menu.y,
                         left: menu.x,
-                        background: 'white',
-                        border: '1px solid #ccc',
-                        padding: 8,
-                        zIndex: 1000,
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Create new pin */}
-                    <div
-                        style={{ padding: 4, cursor: 'pointer' }}
+                    <button
+                        type="button"
+                        style={menuButtonStyle}
                         onClick={() => {
                             setPendingPin({ lat: menu.lat, lng: menu.lng });
                             setEditingPinId(null);
                             setMenu(null);
                         }}
                     >
-                        ➕ Add Pin
-                    </div>
+                        Add Pin
+                    </button>
 
                     {/* Add catch to existing pin */}
                     {menu.pinId && (
-                        <div
-                            style={{ padding: 4, cursor: 'pointer' }}
+                        <button
+                            type="button"
+                            style={menuButtonStyle}
                             onClick={() => {
                                 setPendingPin({ lat: menu.lat, lng: menu.lng });
                                 setEditingPinId(menu.pinId);
                                 setMenu(null);
                             }}
                         >
-                            🎣 Add Catch
-                        </div>
+                            Add Catch
+                        </button>
                     )}
 
                     {/* Delete */}
                     {menu.pinId && (
-                        <div
-                            style={{ padding: 4, cursor: 'pointer', color: 'red' }}
+                        <button
+                            type="button"
+                            style={dangerMenuButtonStyle}
                             onClick={() => deletePin(menu.pinId)}
                         >
                             Delete Pin
-                        </div>
+                        </button>
                     )}
                 </div>
             )}
@@ -493,86 +651,96 @@ export default function WebMap({
             {/* Form */}
             {pendingPin && (
                 <div
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        background: 'white',
-                        padding: 20,
-                        border: '1px solid #ccc',
-                        borderRadius: 8,
-                        zIndex: 2000,
-                        width: 300,
-                    }}
+                    style={pinFormOverlayStyle}
+                    onClick={() => setPendingPin(null)}
                 >
-                    <h3>
-                        {editingPinId ? "Add Catch" : "Create Pin"}
-                    </h3>
-
-                    <input
-                        placeholder="Fish Species"
-                        value={currentCatch.species}
-                        onChange={(e) =>
-                            setCurrentCatch({ ...currentCatch, species: e.target.value })
-                        }
-                    />
-
-                    <input
-                        placeholder="Bait Used"
-                        value={currentCatch.bait}
-                        onChange={(e) =>
-                            setCurrentCatch({ ...currentCatch, bait: e.target.value })
-                        }
-                    />
-
-                    <input
-                        placeholder="Size"
-                        value={currentCatch.size}
-                        onChange={(e) =>
-                            setCurrentCatch({ ...currentCatch, size: e.target.value })
-                        }
-                    />
-
-                    <input
-                        placeholder="Weight"
-                        value={currentCatch.weight}
-                        onChange={(e) =>
-                            setCurrentCatch({ ...currentCatch, weight: e.target.value })
-                        }
-                    />
-
-                    {/* Add another catch */}
-                    <button
-                        onClick={() => {
-                            setCatches((prev) => [...prev, currentCatch]);
-                            setCurrentCatch({
-                                species: '',
-                                bait: '',
-                                size: '',
-                                weight: '',
-                            });
-                        }}
-                        style={{ marginTop: 8 }}
+                    <div
+                        style={pinFormStyle}
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        ➕ Add Another Catch
-                    </button>
+                        <h3 style={pinFormTitleStyle}>
+                            {editingPinId ? 'Add Catch' : 'Create Pin'}
+                        </h3>
+                        <p style={pinFormSubtitleStyle}>
+                            Add the catch details you want attached to this map spot.
+                        </p>
 
-                    {/* Show added catches */}
-                    {catches.map((c, i) => (
-                        <div key={i} style={{ marginTop: 6 }}>
-                            {c.species}
-                        </div>
-                    ))}
+                        <input
+                            placeholder="Fish species"
+                            style={pinInputStyle}
+                            value={currentCatch.species}
+                            onChange={(e) =>
+                                setCurrentCatch({ ...currentCatch, species: e.target.value })
+                            }
+                        />
 
-                    <div style={{ marginTop: 10 }}>
-                        <button onClick={savePin}>Save</button>
+                        <input
+                            placeholder="Bait used"
+                            style={pinInputStyle}
+                            value={currentCatch.bait}
+                            onChange={(e) =>
+                                setCurrentCatch({ ...currentCatch, bait: e.target.value })
+                            }
+                        />
+
+                        <input
+                            placeholder="Size"
+                            style={pinInputStyle}
+                            value={currentCatch.size}
+                            onChange={(e) =>
+                                setCurrentCatch({ ...currentCatch, size: e.target.value })
+                            }
+                        />
+
+                        <input
+                            placeholder="Weight"
+                            style={pinInputStyle}
+                            value={currentCatch.weight}
+                            onChange={(e) =>
+                                setCurrentCatch({ ...currentCatch, weight: e.target.value })
+                            }
+                        />
+
+                        {/* Add another catch */}
                         <button
-                            onClick={() => setPendingPin(null)}
-                            style={{ marginLeft: 10 }}
+                            type="button"
+                            onClick={() => {
+                                setCatches((prev) => [...prev, currentCatch]);
+                                setCurrentCatch({
+                                    species: '',
+                                    bait: '',
+                                    size: '',
+                                    weight: '',
+                                });
+                            }}
+                            style={addCatchButtonStyle}
                         >
-                            Cancel
+                            Add Another Catch
                         </button>
+
+                        {/* Show added catches */}
+                        {catches.map((c, i) => (
+                            <div key={i} style={queuedCatchStyle}>
+                                {c.species}
+                            </div>
+                        ))}
+
+                        <div style={pinButtonRowStyle}>
+                            <button
+                                type="button"
+                                style={primaryPinButtonStyle}
+                                onClick={savePin}
+                            >
+                                Save Pin
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPendingPin(null)}
+                                style={secondaryPinButtonStyle}
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
