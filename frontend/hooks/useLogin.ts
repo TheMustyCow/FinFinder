@@ -31,6 +31,7 @@ export function useLogin(): UseLoginReturn {
 
         if (result.success) {
             console.log('Login successful, token:', result.token);
+            localStorage.setItem('username', email.trim());
             router.replace('/home');
         } else {
             setError(result.error || 'Login failed');

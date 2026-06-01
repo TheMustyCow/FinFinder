@@ -9,6 +9,8 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
+const userPinsPost = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/userPinsPost';
+const userPinsGet = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/userPinsGet';
 /* Leaflet icons */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
@@ -36,7 +38,7 @@ type Catch = {
 };
 
 type Pin = {
-    id: number;
+    id: string;
     lat: number;
     lng: number;
     catches: Catch[];
@@ -74,7 +76,7 @@ export default function WebMap() {
         lng: number;
         x: number;
         y: number;
-        pinId?: number;
+        pinId?: string;
     } | null>(null);
 
     const [pendingPin, setPendingPin] = useState<{
@@ -82,7 +84,7 @@ export default function WebMap() {
         lng: number;
     } | null>(null);
 
-    const [editingPinId, setEditingPinId] = useState<number | null>(null);
+    const [editingPinId, setEditingPinId] = useState<string | null>(null);
 
     /* Catch building */
     const [catches, setCatches] = useState<Catch[]>([]);
@@ -101,55 +103,132 @@ export default function WebMap() {
                 setGovLakes(data);
             })
             .catch((err) => {
-                console.error('Error fetching government lskes:', err);
+                console.error('Error fetching government lakes:', err);
             });
     }, []);
 
-    /* Save pin or add catch */
-    const savePin = () => {
-        if (!pendingPin) return;
-
-        if (editingPinId) {
-            setPins((prev) =>
-                prev.map((p) =>
-                    p.id === editingPinId
-                        ? {
-                            ...p,
-                            catches: [...p.catches, ...catches, currentCatch],
-                        }
-                        : p
-                )
-            );
-        } else {
-            setPins((prev) => [
-                ...prev,
-                {
-                    id: Date.now(),
-                    lat: pendingPin.lat,
-                    lng: pendingPin.lng,
-                    catches: [...catches, currentCatch],
-                },
-            ]);
+    useEffect(() => {
+        const username = localStorage.getItem('username');
+        if (!username) {
+            console.error('No username found');
+            return;
         }
 
-        // reset
-        setCatches([]);
-        setCurrentCatch({
-            species: '',
-            bait: '',
-            size: '',
-            weight: '',
-        });
+        fetch(`${userPinsGet}?Username=${encodeURIComponent(username)}`)
+            .then((res) => res.json())
+            .then((data) => {
+                console.log('User pins:', data);
+                setPins(data);
+            })
+            .catch((err) => {
+                console.error('Error fetching user pins:', err);
+            });
+    }, []);
 
-        setEditingPinId(null);
-        setPendingPin(null);
+
+    const savePin = async () => {
+        if (!pendingPin) return;
+
+        const username = localStorage.getItem('username');
+        if (!username) {
+            console.error('No username found');
+            return;
+        }
+
+        const pinId = editingPinId || Date.now().toString();
+
+        try {
+            const res = await fetch(userPinsPost, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    Username: username, // temp name
+                    pinId: pinId,
+                    lat: pendingPin.lat,
+                    lng: pendingPin.lng,
+                    catches: [...catches, currentCatch]
+                        .filter(c => c.species)
+                        .map(c => ({
+                            species: c.species,
+                            bait: c.bait,
+                            size: c.size,
+                            weight: c.weight,
+                        })),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error('Save failed:', data);
+                return;
+            }
+
+            console.log('Saved to backend:', data);
+
+            // refresh the pins
+            const refresh = await fetch(
+                `${userPinsGet}?Username=${encodeURIComponent(username)}`
+            );
+            const pinsData = await refresh.json();
+            setPins(pinsData);
+
+            // set UI
+            setCatches([]);
+            setCurrentCatch({
+                species: '',
+                bait: '',
+                size: '',
+                weight: '',
+            });
+
+            setPendingPin(null);
+            setEditingPinId(null);
+
+        } catch (err) {
+            console.error('Error saving pin:', err);
+        }
+    };
+
+    const userPinsDelete = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/deleteUserPins';
+
+    const deletePin = async (id: string) => {
+        try {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                console.error('No username found');
+                return;
+            }
+            const res = await fetch(
+                `${userPinsDelete}?Username=${encodeURIComponent(username)}&pinId=${encodeURIComponent(id)}`,
+                {
+                    method: 'DELETE',
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error('Delete failed:', data);
+                return;
+            }
+
+            console.log('Deleted from backend:', data);
+
+            setPins((prev) => prev.filter((p) => p.id !== id));
+            setMenu(null);
+        } catch (err) {
+            console.error('Error deleting pin:', err);
+        }
     };
 
     /* Delete pin */
-    const deletePin = (id: number) => {
+    /*const deletePin = (id: string) => {
         setPins((prev) => prev.filter((p) => p.id !== id));
         setMenu(null);
-    };
+    };*/
 
     return (
         <div
@@ -358,7 +437,7 @@ export default function WebMap() {
                     {/* Show added catches */}
                     {catches.map((c, i) => (
                         <div key={i} style={{ marginTop: 6 }}>
-                             {c.species}
+                            {c.species}
                         </div>
                     ))}
 
