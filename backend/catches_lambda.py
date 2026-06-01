@@ -65,7 +65,18 @@ def _create_catch(event, user_id: str, username: str):
     bait = _optional_string(body, "bait")
     weight = _required_number(body, "weight")
     length = _required_number(body, "length")
+    latitude = _optional_number(body, "latitude")
+    longitude = _optional_number(body, "longitude")
     post_to_community = bool(body.get("isPostedToCommunity", False))
+
+    if (latitude is None) != (longitude is None):
+        raise ValueError("latitude and longitude must be provided together")
+
+    if latitude is not None and not (Decimal("-90") <= latitude <= Decimal("90")):
+        raise ValueError("latitude must be between -90 and 90")
+
+    if longitude is not None and not (Decimal("-180") <= longitude <= Decimal("180")):
+        raise ValueError("longitude must be between -180 and 180")
 
     now = datetime.now(timezone.utc)
     catch_id = str(uuid.uuid4())
@@ -95,6 +106,12 @@ def _create_catch(event, user_id: str, username: str):
     if bait:
         item["bait"] = bait
         item["Bait"] = bait
+
+    if latitude is not None and longitude is not None:
+        item["latitude"] = latitude
+        item["Latitude"] = latitude
+        item["longitude"] = longitude
+        item["Longitude"] = longitude
 
     if post_to_community:
         item["communityPk"] = "COMMUNITY"
@@ -228,6 +245,18 @@ def _required_number(body: Dict[str, Any], field: str) -> Decimal:
         raise ValueError(f"{field} must be a number")
 
 
+def _optional_number(body: Dict[str, Any], field: str) -> Optional[Decimal]:
+    value = body.get(field)
+
+    if value in (None, ""):
+        return None
+
+    try:
+        return Decimal(str(value))
+    except Exception:
+        raise ValueError(f"{field} must be a number")
+
+
 def _to_catch_response(item: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": item.get("id"),
@@ -235,6 +264,8 @@ def _to_catch_response(item: Dict[str, Any]) -> Dict[str, Any]:
         "weight": _json_safe(item.get("weight") or item.get("Weight")),
         "length": _json_safe(item.get("length") or item.get("Length")),
         "location": item.get("location") or item.get("Location"),
+        "latitude": _json_safe(item.get("latitude") or item.get("Latitude")),
+        "longitude": _json_safe(item.get("longitude") or item.get("Longitude")),
         "date": item.get("date"),
         "desc": item.get("desc") or item.get("Description") or "",
         "userId": item.get("userId"),

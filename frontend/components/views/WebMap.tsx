@@ -8,6 +8,12 @@ import {
     useMapEvents,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { MapWrapperProps } from './MapWrapper';
+import { catchesService, type Catch as LoggedCatch } from '../../services/catches';
+
+const LeafletMapContainer = MapContainer as any;
+const LeafletMarker = Marker as any;
+const LeafletTileLayer = TileLayer as any;
 
 const userPinsPost = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/userPinsPost';
 const userPinsGet = 'https://ii3pxy0ro7.execute-api.us-east-1.amazonaws.com/userPinsGet';
@@ -54,11 +60,20 @@ type GovLake = {
 /* Right-click handler */
 function RightClickHandler({
                                onRightClick,
+                               selectionMode,
+                               onSelectCoordinate,
                            }: {
     onRightClick: (lat: number, lng: number, e: MouseEvent) => void;
+    selectionMode?: boolean;
+    onSelectCoordinate?: (lat: number, lng: number) => void;
 }) {
     useMapEvents({
         contextmenu(e) {
+            if (selectionMode) {
+                onSelectCoordinate?.(e.latlng.lat, e.latlng.lng);
+                return;
+            }
+
             onRightClick(e.latlng.lat, e.latlng.lng, e.originalEvent);
         },
     });
@@ -66,8 +81,31 @@ function RightClickHandler({
     return null;
 }
 
-export default function WebMap() {
+function SelectCoordinateHandler({
+                                     selectionMode,
+                                     onSelectCoordinate,
+                                 }: {
+    selectionMode?: boolean;
+    onSelectCoordinate?: (lat: number, lng: number) => void;
+}) {
+    useMapEvents({
+        click(e) {
+            if (selectionMode) {
+                onSelectCoordinate?.(e.latlng.lat, e.latlng.lng);
+            }
+        },
+    });
+
+    return null;
+}
+
+export default function WebMap({
+                                   selectionMode = false,
+                                   selectedCoordinate,
+                                   onSelectCoordinate,
+                               }: MapWrapperProps) {
     const [pins, setPins] = useState<Pin[]>([]);
+    const [mappedCatches, setMappedCatches] = useState<LoggedCatch[]>([]);
 
     const [govLakes, setGovLakes] = useState<GovLake[]>([]);
 
@@ -123,6 +161,23 @@ export default function WebMap() {
             .catch((err) => {
                 console.error('Error fetching user pins:', err);
             });
+    }, []);
+
+    useEffect(() => {
+        const loadMappedCatches = async () => {
+            try {
+                const myCatches = await catchesService.getMyCatches(true);
+                setMappedCatches(myCatches.filter((item) => (
+                    typeof item.latitude === 'number' &&
+                    typeof item.longitude === 'number'
+                )));
+            } catch (err) {
+                console.error('Error fetching catch map points:', err);
+            }
+        };
+
+        loadMappedCatches();
+        return catchesService.subscribe(loadMappedCatches);
     }, []);
 
 
@@ -235,14 +290,19 @@ export default function WebMap() {
             style={{ height: '100%', width: '100%', position: 'relative' }}
             onClick={() => setMenu(null)}
         >
-            <MapContainer
+            <LeafletMapContainer
                 center={[47.6062, -122.3321]}
                 zoom={7}
                 style={{ height: '100%', width: '100%' }}
             >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <LeafletTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
                 <RightClickHandler
+                    selectionMode={selectionMode}
+                    onSelectCoordinate={(lat, lng) => onSelectCoordinate?.({
+                        latitude: lat,
+                        longitude: lng,
+                    })}
                     onRightClick={(lat, lng, e) => {
                         setMenu({
                             lat,
@@ -252,9 +312,16 @@ export default function WebMap() {
                         });
                     }}
                 />
+                <SelectCoordinateHandler
+                    selectionMode={selectionMode}
+                    onSelectCoordinate={(lat, lng) => onSelectCoordinate?.({
+                        latitude: lat,
+                        longitude: lng,
+                    })}
+                />
 
                 {govLakes.map((lake) => (
-                    <Marker
+                    <LeafletMarker
                         key={lake.lakeId}
                         position={[
                             Number(lake.lat),
@@ -276,12 +343,12 @@ export default function WebMap() {
                                 </a>
                             </div>
                         </Popup>
-                    </Marker>
+                    </LeafletMarker>
                 ))}
 
                 {/* User Pins */}
                 {pins.map((pin) => (
-                    <Marker
+                    <LeafletMarker
                         key={pin.id}
                         position={[pin.lat, pin.lng]}
                         eventHandlers={{
@@ -310,9 +377,66 @@ export default function WebMap() {
                                 ))}
                             </div>
                         </Popup>
-                    </Marker>
+                    </LeafletMarker>
                 ))}
-            </MapContainer>
+
+                {mappedCatches.map((catchData) => (
+                    <LeafletMarker
+                        key={`catch-${catchData.id}`}
+                        position={[catchData.latitude as number, catchData.longitude as number]}
+                    >
+                        <Popup>
+                            <div>
+                                <strong>{catchData.fish}</strong>
+                                <br />
+                                {catchData.location}
+                                <br />
+                                {catchData.weight} lbs, {catchData.length} in
+                                {catchData.bait ? (
+                                    <>
+                                        <br />
+                                        Bait: {catchData.bait}
+                                    </>
+                                ) : null}
+                            </div>
+                        </Popup>
+                    </LeafletMarker>
+                ))}
+
+                {selectedCoordinate && (
+                    <LeafletMarker
+                        key="selected-catch-coordinate"
+                        position={[selectedCoordinate.latitude, selectedCoordinate.longitude]}
+                    >
+                        <Popup>
+                            <div>
+                                <strong>Selected catch point</strong>
+                            </div>
+                        </Popup>
+                    </LeafletMarker>
+                )}
+            </LeafletMapContainer>
+
+            {selectionMode && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        zIndex: 1000,
+                        background: 'white',
+                        border: '1px solid #d7e2e8',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        color: '#334155',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        boxShadow: '0 6px 14px rgba(15, 23, 42, 0.12)',
+                    }}
+                >
+                    Click the map to place this catch
+                </div>
+            )}
 
             {/* Right-click menu */}
             {menu && (

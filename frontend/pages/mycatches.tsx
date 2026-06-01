@@ -1,25 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
+import { useIsFocused, usePathname, useRouter } from 'expo-router';
 import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Pressable, type GestureResponderEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CatchDetailModal from '../components/catches/CatchDetailModal';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
+import { catchDraftService, type CatchCoordinate } from '../services/catchDraft';
 import { catchesService, type Catch } from '../services/catches';
 import { colors } from '../constants/colors';
 
+const hasCatchDraft = (draft: ReturnType<typeof catchDraftService.getDraft>) => Boolean(
+    draft.fish ||
+    draft.location ||
+    draft.weight ||
+    draft.length ||
+    draft.bait ||
+    draft.notes ||
+    draft.postToCommunity ||
+    draft.coordinate
+);
+
 export default function MyCatches() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const isFocused = useIsFocused();
+    const initialDraftRef = useRef(catchDraftService.getDraft());
     const [modalVisible, setModalVisible] = useState(false);
+    const [isSelectingCoordinate, setIsSelectingCoordinate] = useState(catchDraftService.isSelectingCoordinate());
     const [isSaving, setIsSaving] = useState(false);
     const [hoveredPublishedCatchId, setHoveredPublishedCatchId] = useState<string | null>(null);
     const [selectedCatch, setSelectedCatch] = useState<Catch | null>(null);
     const publishedHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const [fish, setFish] = useState('');
-    const [location, setLocation] = useState('');
-    const [weight, setWeight] = useState('');
-    const [length, setLength] = useState('');
-    const [bait, setBait] = useState('');
-    const [notes, setNotes] = useState('');
-    const [postToCommunity, setPostToCommunity] = useState(false);
+    const [fish, setFish] = useState(initialDraftRef.current.fish);
+    const [location, setLocation] = useState(initialDraftRef.current.location);
+    const [weight, setWeight] = useState(initialDraftRef.current.weight);
+    const [length, setLength] = useState(initialDraftRef.current.length);
+    const [bait, setBait] = useState(initialDraftRef.current.bait);
+    const [notes, setNotes] = useState(initialDraftRef.current.notes);
+    const [postToCommunity, setPostToCommunity] = useState(initialDraftRef.current.postToCommunity);
+    const [catchCoordinate, setCatchCoordinate] = useState<CatchCoordinate | null>(initialDraftRef.current.coordinate);
 
     const [catches, setCatches] = useState<Catch[]>([]);
     const [loadError, setLoadError] = useState('');
@@ -27,6 +46,33 @@ export default function MyCatches() {
     useEffect(() => {
         loadCatches();
         return catchesService.subscribe(loadCatches);
+    }, []);
+
+    useEffect(() => {
+        const savedDraft = catchDraftService.getDraft();
+
+        if (hasCatchDraft(savedDraft) && !catchDraftService.isSelectingCoordinate()) {
+            setModalVisible(true);
+        }
+
+        return catchDraftService.subscribe(() => {
+            const nextDraft = catchDraftService.getDraft();
+            const nextIsSelectingCoordinate = catchDraftService.isSelectingCoordinate();
+
+            setFish(nextDraft.fish);
+            setLocation(nextDraft.location);
+            setWeight(nextDraft.weight);
+            setLength(nextDraft.length);
+            setBait(nextDraft.bait);
+            setNotes(nextDraft.notes);
+            setPostToCommunity(nextDraft.postToCommunity);
+            setCatchCoordinate(nextDraft.coordinate);
+            setIsSelectingCoordinate(nextIsSelectingCoordinate);
+
+            if (hasCatchDraft(nextDraft) && !nextIsSelectingCoordinate) {
+                setModalVisible(true);
+            }
+        });
     }, []);
 
     useEffect(() => () => {
@@ -53,7 +99,51 @@ export default function MyCatches() {
         setBait('');
         setNotes('');
         setPostToCommunity(false);
+        setCatchCoordinate(null);
+        catchDraftService.clearDraft();
     };
+
+    const getCurrentDraft = () => ({
+        fish,
+        location,
+        weight,
+        length,
+        bait,
+        notes,
+        postToCommunity,
+        coordinate: catchCoordinate,
+    });
+
+    const chooseCatchCoordinate = () => {
+        const currentDraft = getCurrentDraft();
+
+        setModalVisible(false);
+        setIsSelectingCoordinate(true);
+
+        setTimeout(() => {
+            catchDraftService.startCoordinateSelection(currentDraft);
+            router.replace('/spotsmap?selectCatchLocation=1');
+        }, 0);
+    };
+
+    const cancelAddCatch = () => {
+        setModalVisible(false);
+        resetForm();
+    };
+
+    const clearCatchCoordinate = () => {
+        const nextDraft = {
+            ...getCurrentDraft(),
+            coordinate: null,
+        };
+
+        setCatchCoordinate(null);
+        catchDraftService.saveDraft(nextDraft);
+    };
+
+    const formatCoordinate = (coordinate: CatchCoordinate) => (
+        `${coordinate.latitude.toFixed(5)}, ${coordinate.longitude.toFixed(5)}`
+    );
 
     const shareCatchToCommunity = async (catchId: string) => {
         const result = await catchesService.postCatchToCommunity(catchId);
@@ -124,6 +214,8 @@ export default function MyCatches() {
             const savedCatch = await catchesService.createCatch({
                 fish,
                 location,
+                latitude: catchCoordinate?.latitude,
+                longitude: catchCoordinate?.longitude,
                 weight: parsedWeight,
                 length: parsedLength,
                 bait: bait || undefined,
@@ -257,7 +349,7 @@ export default function MyCatches() {
 
             {/* MODAL */}
             <Modal
-                visible={modalVisible}
+                visible={isFocused && pathname === '/mycatches' && modalVisible && !isSelectingCoordinate}
                 animationType="slide"
                 transparent={true}
             >
@@ -277,12 +369,37 @@ export default function MyCatches() {
                         />
 
                         <TextInput
-                            placeholder="Location"
+                            placeholder="Location name"
                             placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={location}
                             onChangeText={setLocation}
                         />
+
+                        <View style={styles.mapSelectRow}>
+                            <TouchableOpacity
+                                style={styles.mapSelectButton}
+                                onPress={chooseCatchCoordinate}
+                            >
+                                <Text style={styles.mapSelectButtonText}>
+                                    {catchCoordinate ? 'Change Map Point' : 'Choose Map Point'}
+                                </Text>
+                            </TouchableOpacity>
+                            <View style={styles.mapSelectStatus}>
+                                <Text style={styles.mapSelectLabel}>Map point</Text>
+                                <Text style={styles.mapSelectValue} numberOfLines={1}>
+                                    {catchCoordinate ? formatCoordinate(catchCoordinate) : 'Not selected'}
+                                </Text>
+                            </View>
+                            {catchCoordinate && (
+                                <TouchableOpacity
+                                    style={styles.clearMapButton}
+                                    onPress={clearCatchCoordinate}
+                                >
+                                    <Text style={styles.clearMapButtonText}>Clear</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
 
                         <TextInput
                             placeholder="Weight (lbs)"
@@ -337,7 +454,7 @@ export default function MyCatches() {
                             <Text style={styles.saveText}>{isSaving ? 'Saving...' : 'Save Catch'}</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                        <TouchableOpacity onPress={cancelAddCatch}>
                             <Text style={styles.cancelText}>Cancel</Text>
                         </TouchableOpacity>
 
@@ -606,6 +723,50 @@ const styles = StyleSheet.create({
     notesInput: {
         minHeight: 82,
         textAlignVertical: 'top',
+    },
+    mapSelectRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 10,
+    },
+    mapSelectButton: {
+        backgroundColor: '#e8f4f8',
+        borderWidth: 1,
+        borderColor: colors.primaryButtonBorder,
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+    },
+    mapSelectButtonText: {
+        color: colors.primaryButtonBackground,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    mapSelectStatus: {
+        flex: 1,
+        minWidth: 0,
+    },
+    mapSelectLabel: {
+        color: '#94a3b8',
+        fontSize: 11,
+        fontWeight: '700',
+        marginBottom: 2,
+        textTransform: 'uppercase',
+    },
+    mapSelectValue: {
+        color: '#334155',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    clearMapButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+    },
+    clearMapButtonText: {
+        color: '#64748b',
+        fontSize: 13,
+        fontWeight: '700',
     },
     checkboxRow: {
         flexDirection: 'row',

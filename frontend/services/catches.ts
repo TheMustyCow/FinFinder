@@ -6,6 +6,8 @@ export interface Catch {
     weight: number;
     length: number;
     location: string;
+    latitude?: number;
+    longitude?: number;
     date: string;
     desc: string;
     userId: string;
@@ -19,6 +21,8 @@ export interface CreateCatchInput {
     weight: number;
     length: number;
     location: string;
+    latitude?: number;
+    longitude?: number;
     desc: string;
     bait?: string;
 }
