@@ -3,6 +3,7 @@ import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { authService } from '../services/auth';
+import { colors } from '../constants/colors';
 
 // App title component for the header left side
 function AppTitle() {
@@ -73,18 +74,21 @@ function HeaderRight() {
     );
 }
 
+function AppHeader() {
+    return (
+        <View style={styles.appHeader}>
+            <AppTitle />
+            <HeaderRight />
+        </View>
+    );
+}
+
 export default function RootLayout() {
     return (
         <>
             <Stack
                 screenOptions={{
-                    headerStyle: { backgroundColor: '#0f172a' },
-                    headerShadowVisible: false,
-                    headerTintColor: '#fff',
-                    headerTitleStyle: { fontWeight: 'bold' },
-                    headerLeft: () => <AppTitle />,
-                    headerTitle: () => null,
-                    headerRight: () => <HeaderRight />,
+                    header: () => <AppHeader />,
                     headerBackVisible: false,
                 }}
             >
@@ -107,6 +111,15 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+    appHeader: {
+        height: 70,
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.headerBackground,
+        paddingLeft: 2,
+    },
     appTitle: {
         color: '#fff',
         fontSize: 20,
@@ -129,7 +142,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     activeNavButton: {
-        backgroundColor: 'rgba(255, 255,  255, 0.2)',
+        backgroundColor: colors.activeNavBackground,
     },
     navButtonText: {
         color: '#fff',
@@ -142,12 +155,12 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
         marginRight: 16,
         borderRadius: 6,
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        backgroundColor: colors.dangerButtonBackground,
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: colors.dangerButtonBorder,
     },
     logoutButtonText: {
-        color: '#ef4444',
+        color: colors.dangerText,
         fontSize: 12,
         fontWeight: '600',
     },

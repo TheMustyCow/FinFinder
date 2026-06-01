@@ -15,6 +15,7 @@ import {BestTimeCard} from "@components/ui/BestTimeCard";
 import {RarestFishCard} from "@components/ui/RarestFishCard";
 import {TopAnglersCard} from "@components/ui/TopAnglersCard"
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
+import { colors } from '../constants/colors';
 
 export default function FishingDataPage() {
     const [species, setSpecies] = useState<string>('');
@@ -176,7 +177,7 @@ export default function FishingDataPage() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.pageBackground,
     },
     header: {
         backgroundColor: 'white',
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#e0e0e0',
     },
     title: {
-        color: '#111827',
+        color: colors.primaryText,
         fontSize: 20,
         fontWeight: '600',
         textAlign: 'center',
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d7e2e8',
         borderRadius: 8,
-        color: '#0f172a',
+        color: colors.primaryText,
         paddingVertical: 11,
         paddingHorizontal: 12,
         marginBottom: 12,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     groupTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0f172a',
+        color: colors.primaryText,
         marginBottom: 8,
     },
     checkboxGroup: {
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
         borderColor: '#d7e2e8',
     },
     searchButton: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 12,
         paddingHorizontal: 40,
         borderRadius: 8,
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
     },
     resultsTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 8,

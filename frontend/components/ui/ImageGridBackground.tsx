@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { colors } from '../../constants/colors';
 
 interface ImageGridBackgroundProps {
     children: ReactNode;
@@ -47,7 +48,7 @@ export function ImageGridBackground({
 const styles = StyleSheet.create({
     backgroundStage: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.imageGridBackground,
         overflow: 'hidden',
     },
     backgroundTileGrid: {

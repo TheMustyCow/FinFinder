@@ -3,6 +3,7 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
+import { colors } from '../constants/colors';
 
 type WeatherData = {
     temp: number;
@@ -115,7 +116,7 @@ function NavCard({ label, onPress }: { label: string; onPress: () => void }) {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.pageBackground,
     },
     topBanner: {
         height: 220,
@@ -132,9 +133,9 @@ const styles = StyleSheet.create({
     },
     topBannerOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(15, 23, 42, 0.18)',
+        backgroundColor: colors.bannerOverlay,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(15, 23, 42, 0.24)',
+        borderBottomColor: colors.bannerBorder,
     },
     contentContainer: {
         flex: 1,
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     heroTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 26,
         fontWeight: '700',
         marginBottom: 6,
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     sectionTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
         textAlign: 'center',
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     conditionValue: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 17,
         fontWeight: '700',
         textAlign: 'center',
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
         minHeight: 72,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         borderRadius: 8,
         paddingHorizontal: 14,
     },

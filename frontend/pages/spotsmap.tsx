@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapWrapper from '../components/views/MapWrapper';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
+import { colors } from '../constants/colors';
 
 export default function SpotsMapScreen() {
     return (
@@ -24,7 +25,7 @@ export default function SpotsMapScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.pageBackground,
     },
     header: {
         backgroundColor: 'white',

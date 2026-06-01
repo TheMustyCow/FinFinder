@@ -2,6 +2,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleShe
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ImageGridBackground } from '../ui/ImageGridBackground';
+import { colors } from '../../constants/colors';
 
 //A function that implements this interface must have parameters with these names and types.
 interface LoginViewProps {
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     headerTitle: {
-        color: '#111827',
+        color: colors.primaryText,
         fontSize: 20,
         fontWeight: '600',
         textAlign: 'center',
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.82)',
         overflow: 'hidden',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.24,
         shadowRadius: 24,
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 42,
     },
     title: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 28,
         fontWeight: '700',
         textAlign: 'center',
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        color: colors.primaryText,
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderRadius: 8,
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     loginButton: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 13,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     loginButtonDisabled: {
-        backgroundColor: '#cbd5e1',
+        backgroundColor: colors.disabledButtonBackground,
     },
     loginButtonText: {
         color: '#ffffff',
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
         marginRight: 5,
     },
     footerLink: {
-        color: '#005c87',
+        color: colors.primaryText,
         fontSize: 14,
         fontWeight: '700',
     },

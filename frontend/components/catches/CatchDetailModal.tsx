@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Catch } from '../../services/catches';
+import { colors } from '../../constants/colors';
 
 interface CatchDetailModalProps {
     catchData: Catch | null;
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(15, 23, 42, 0.42)',
+        backgroundColor: colors.modalBackdrop,
     },
     detailCard: {
         width: '76%',
@@ -133,13 +134,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d7e2e8',
         overflow: 'hidden',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 16 },
         shadowOpacity: 0.22,
         shadowRadius: 28,
     },
     detailHeader: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 20,
         paddingHorizontal: 24,
         flexDirection: 'row',
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
     },
     descriptionLabel: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 16,
         fontWeight: '700',
         marginBottom: 10,

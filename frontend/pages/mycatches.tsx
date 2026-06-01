@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CatchDetailModal from '../components/catches/CatchDetailModal';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
 import { catchesService, type Catch } from '../services/catches';
+import { colors } from '../constants/colors';
 
 export default function MyCatches() {
     const [modalVisible, setModalVisible] = useState(false);
@@ -354,7 +355,7 @@ export default function MyCatches() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.pageBackground,
     },
     header: {
         backgroundColor: 'white',
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '600',
         textAlign: 'center',
-        color: '#111827',
+        color: colors.primaryText,
     },
     contentContainer: {
         flex: 1,
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     sectionTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
     },
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
         marginTop: 3,
     },
     addButton: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -431,13 +432,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d7e2e8',
         overflow: 'hidden',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 5,
     },
     cardHeader: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingHorizontal: 18,
         paddingTop: 12,
         paddingBottom: 12,
@@ -467,18 +468,18 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
     },
     publishedTooltip: {
         position: 'absolute',
         top: 34,
         right: 0,
         width: 156,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.primaryButtonBackground,
         borderRadius: 6,
         paddingVertical: 7,
         paddingHorizontal: 10,
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.16,
         shadowRadius: 10,
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 6,
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
         padding: 24,
         borderWidth: 1,
         borderColor: '#d7e2e8',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.18,
         shadowRadius: 18,
@@ -581,7 +582,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#0f172a',
+        color: colors.primaryText,
         textAlign: 'center',
     },
     modalSubtitle: {
@@ -593,7 +594,7 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        color: colors.primaryText,
         paddingVertical: 11,
         paddingHorizontal: 12,
         borderRadius: 8,
@@ -617,13 +618,13 @@ const styles = StyleSheet.create({
         height: 22,
         borderRadius: 4,
         borderWidth: 2,
-        borderColor: '#005c87',
+        borderColor: colors.primaryButtonBorder,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 10,
     },
     checkboxChecked: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.checkboxCheckedBackground,
     },
     checkboxDot: {
         width: 10,
@@ -636,7 +637,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     saveButton: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -644,7 +645,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     saveButtonDisabled: {
-        backgroundColor: '#cbd5e1',
+        backgroundColor: colors.disabledButtonBackground,
     },
     saveText: {
         color: '#fff',
@@ -652,7 +653,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     shareButton: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 10,
         paddingHorizontal: 14,
         borderRadius: 8,

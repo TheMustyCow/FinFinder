@@ -6,6 +6,7 @@ import Card from '../components/community/Card';
 import CatchDetailModal from '../components/catches/CatchDetailModal';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
 import { catchesService, type Catch } from '../services/catches';
+import { colors } from '../constants/colors';
 
 export default function CommunityScreen() {
     const [catches, setCatches] = useState<Catch[]>([]);
@@ -108,7 +109,7 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: colors.pageBackground,
     },
     header: {
         backgroundColor: 'white',
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyTitle: {
-        color: '#0f172a',
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 6,
@@ -170,14 +171,14 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     button: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
         marginHorizontal: 15,
     },
     buttonDisabled: {
-        backgroundColor: '#ccc',
+        backgroundColor: colors.paginationDisabledButtonBackground,
     },
     buttonText: {
         color: 'white',

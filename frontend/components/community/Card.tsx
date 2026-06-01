@@ -1,6 +1,7 @@
 // components/community/Card.tsx
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 import type { Catch } from '../../services/catches';
+import { colors } from '../../constants/colors';
 
 interface CardProps {
     catchData: Catch;
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d7e2e8',
         overflow: 'hidden',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 5,
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
         maxWidth: 560,
     },
     cardHeader: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingHorizontal: 18,
         paddingTop: 8,
         paddingBottom: 10,

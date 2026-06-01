@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { colors } from '../../constants/colors';
 
 type Props = {
     label: string;
@@ -32,7 +33,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    checked: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
+    checked: {
+        backgroundColor: colors.checkboxCheckedBackground,
+        borderColor: colors.checkboxCheckedBorder,
+    },
     checkmark: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
     label: { fontSize: 14, color: '#333' },
 });
