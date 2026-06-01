@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import L from 'leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 import {
     MapContainer,
     TileLayer,
@@ -205,7 +206,7 @@ function RightClickHandler({
     onSelectCoordinate?: (lat: number, lng: number) => void;
 }) {
     useMapEvents({
-        contextmenu(e) {
+        contextmenu(e: LeafletMouseEvent) {
             if (selectionMode) {
                 onSelectCoordinate?.(e.latlng.lat, e.latlng.lng);
                 return;
@@ -226,7 +227,7 @@ function SelectCoordinateHandler({
     onSelectCoordinate?: (lat: number, lng: number) => void;
 }) {
     useMapEvents({
-        click(e) {
+        click(e: LeafletMouseEvent) {
             if (selectionMode) {
                 onSelectCoordinate?.(e.latlng.lat, e.latlng.lng);
             }
@@ -509,7 +510,7 @@ export default function WebMap({
                         key={pin.id}
                         position={[pin.lat, pin.lng]}
                         eventHandlers={{
-                            contextmenu: (e) => {
+                            contextmenu: (e: LeafletMouseEvent) => {
                                 e.originalEvent.preventDefault();
                                 const position = getMenuPosition(e.originalEvent);
 
@@ -626,8 +627,11 @@ export default function WebMap({
                             type="button"
                             style={menuButtonStyle}
                             onClick={() => {
+                                const pinId = menu.pinId;
+                                if (!pinId) return;
+
                                 setPendingPin({ lat: menu.lat, lng: menu.lng });
-                                setEditingPinId(menu.pinId);
+                                setEditingPinId(pinId);
                                 setMenu(null);
                             }}
                         >
@@ -640,7 +644,12 @@ export default function WebMap({
                         <button
                             type="button"
                             style={dangerMenuButtonStyle}
-                            onClick={() => deletePin(menu.pinId)}
+                            onClick={() => {
+                                const pinId = menu.pinId;
+                                if (!pinId) return;
+
+                                deletePin(pinId);
+                            }}
                         >
                             Delete Pin
                         </button>
