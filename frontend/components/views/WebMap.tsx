@@ -68,6 +68,10 @@ type Pin = {
     id: string;
     lat: number;
     lng: number;
+    location?: string;
+    locationName?: string;
+    Location?: string;
+    LocationName?: string;
     catches: Catch[];
 };
 
@@ -213,6 +217,13 @@ const queuedCatchStyle: CSSProperties = {
     padding: '8px 10px',
 };
 
+const pinFormErrorStyle: CSSProperties = {
+    color: colors.dangerText,
+    fontSize: 13,
+    fontWeight: 700,
+    margin: '0 0 10px',
+};
+
 /* Right-click handler */
 function RightClickHandler({
                                onRightClick,
@@ -282,6 +293,8 @@ export default function WebMap({
     } | null>(null);
 
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
+    const [pinLocationName, setPinLocationName] = useState('');
+    const [pinFormError, setPinFormError] = useState('');
 
     /* Catch building */
     const [catches, setCatches] = useState<Catch[]>([]);
@@ -306,6 +319,24 @@ export default function WebMap({
             x: Math.max(8, Math.min(event.clientX - rect.left, rect.width - 170)),
             y: Math.max(8, Math.min(event.clientY - rect.top, rect.height - 120)),
         };
+    };
+
+    const getPinLocationName = (pin: Pin) => (
+        pin.locationName || pin.location || pin.LocationName || pin.Location || ''
+    );
+
+    const clearPinForm = () => {
+        setCatches([]);
+        setCurrentCatch({
+            species: '',
+            bait: '',
+            size: '',
+            weight: '',
+        });
+        setPinLocationName('');
+        setPinFormError('');
+        setPendingPin(null);
+        setEditingPinId(null);
     };
 
     useEffect(() => {
@@ -393,6 +424,15 @@ export default function WebMap({
         }
 
         const pinId = editingPinId || Date.now().toString();
+        const existingPin = editingPinId
+            ? pins.find((pin) => pin.id === editingPinId)
+            : undefined;
+        const locationName = pinLocationName.trim();
+
+        if (!locationName) {
+            setPinFormError('Location name is required.');
+            return;
+        }
 
         try {
             const res = await fetch(userPinsPost, {
@@ -405,7 +445,10 @@ export default function WebMap({
                     pinId: pinId,
                     lat: pendingPin.lat,
                     lng: pendingPin.lng,
+                    location: locationName,
+                    locationName: locationName,
                     catches: [...catches, currentCatch]
+                        .concat(existingPin?.catches ?? [])
                         .filter(c => c.species)
                         .map(c => ({
                             species: c.species,
@@ -432,17 +475,7 @@ export default function WebMap({
             const pinsData = await refresh.json();
             setPins(pinsData);
 
-            // set UI
-            setCatches([]);
-            setCurrentCatch({
-                species: '',
-                bait: '',
-                size: '',
-                weight: '',
-            });
-
-            setPendingPin(null);
-            setEditingPinId(null);
+            clearPinForm();
 
         } catch (err) {
             console.error('Error saving pin:', err);
@@ -573,7 +606,7 @@ export default function WebMap({
                     >
                         <Popup>
                             <div>
-                                <strong>Fishing Spot</strong>
+                                <strong>{getPinLocationName(pin) || 'Fishing Spot'}</strong>
                                 {pin.catches.map((c, i) => (
                                     <div key={i} style={{ marginTop: 6 }}>
                                         <strong>{c.species}</strong><br />
@@ -688,6 +721,8 @@ export default function WebMap({
                         onClick={() => {
                             setPendingPin({ lat: menu.lat, lng: menu.lng });
                             setEditingPinId(null);
+                            setPinLocationName('');
+                            setPinFormError('');
                             setMenu(null);
                         }}
                     >
@@ -705,6 +740,13 @@ export default function WebMap({
 
                                 setPendingPin({ lat: menu.lat, lng: menu.lng });
                                 setEditingPinId(pinId);
+                                setPinLocationName(getPinLocationName(pins.find((pin) => pin.id === pinId) ?? {
+                                    id: pinId,
+                                    lat: menu.lat,
+                                    lng: menu.lng,
+                                    catches: [],
+                                }));
+                                setPinFormError('');
                                 setMenu(null);
                             }}
                         >
@@ -734,7 +776,7 @@ export default function WebMap({
             {pendingPin && (
                 <div
                     style={pinFormOverlayStyle}
-                    onClick={() => setPendingPin(null)}
+                    onClick={clearPinForm}
                 >
                     <div
                         style={pinFormStyle}
@@ -755,6 +797,20 @@ export default function WebMap({
                                 setCurrentCatch({ ...currentCatch, species: e.target.value })
                             }
                         />
+
+                        <input
+                            placeholder="Location name"
+                            style={pinInputStyle}
+                            value={pinLocationName}
+                            onChange={(e) => {
+                                setPinLocationName(e.target.value);
+                                setPinFormError('');
+                            }}
+                        />
+
+                        {pinFormError ? (
+                            <p style={pinFormErrorStyle}>{pinFormError}</p>
+                        ) : null}
 
                         <input
                             placeholder="Bait used"
@@ -817,7 +873,7 @@ export default function WebMap({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setPendingPin(null)}
+                                onClick={clearPinForm}
                                 style={secondaryPinButtonStyle}
                             >
                                 Cancel

@@ -177,11 +177,20 @@ export default function MyCatches() {
         setHoveredPublishedCatchId(null);
     };
 
-    const formatDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
+    const formatDate = (date: string) => {
+        const normalizedDate = date?.includes('T') ? date : `${date}T00:00:00`;
+        const parsedDate = new Date(normalizedDate);
+
+        if (Number.isNaN(parsedDate.getTime())) {
+            return 'Unknown date';
+        }
+
+        return parsedDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
 
     const isFormValid = Boolean(
         fish &&
