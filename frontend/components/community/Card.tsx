@@ -1,13 +1,15 @@
 // components/community/Card.tsx
-import { View, Text, StyleSheet } from 'react-native';
+import { Pressable, View, Text, StyleSheet } from 'react-native';
 import type { Catch } from '../../services/catches';
+import { colors } from '../../constants/colors';
 
 interface CardProps {
     catchData: Catch;
     variant?: 'grid' | 'preview';
+    onPress?: () => void;
 }
 
-export default function Card({ catchData, variant = 'grid' }: CardProps) {
+export default function Card({ catchData, variant = 'grid', onPress }: CardProps) {
     const formattedDate = new Date(`${catchData.date}T00:00:00`).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -15,7 +17,11 @@ export default function Card({ catchData, variant = 'grid' }: CardProps) {
     });
 
     return (
-        <View style={[styles.card, variant === 'preview' && styles.previewCard]}>
+        <Pressable
+            accessibilityRole={onPress ? 'button' : undefined}
+            onPress={onPress}
+            style={[styles.card, variant === 'preview' && styles.previewCard]}
+        >
             <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle} numberOfLines={1}>{catchData.fish}</Text>
                 <Text style={styles.authorText} numberOfLines={1}>
@@ -37,7 +43,7 @@ export default function Card({ catchData, variant = 'grid' }: CardProps) {
                     {catchData.desc}
                 </Text>
             </View>
-        </View>
+        </Pressable>
     );
 }
 
@@ -51,7 +57,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d7e2e8',
         overflow: 'hidden',
-        shadowColor: '#0f172a',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 5,
@@ -61,7 +67,7 @@ const styles = StyleSheet.create({
         maxWidth: 560,
     },
     cardHeader: {
-        backgroundColor: '#005c87',
+        backgroundColor: colors.primaryButtonBackground,
         paddingHorizontal: 18,
         paddingTop: 8,
         paddingBottom: 10,
