@@ -3,13 +3,16 @@ import MapView, { Marker } from 'react-native-maps';
 import { StyleSheet } from 'react-native';
 import type { MapWrapperProps } from './MapWrapper';
 import { catchesService, type Catch } from '../../services/catches';
+import { authService } from '../../services/auth';
 
 export default function TheMapNative({
     selectionMode = false,
     selectedCoordinate,
+    showCommunityPins = false,
     onSelectCoordinate,
 }: MapWrapperProps) {
     const [mappedCatches, setMappedCatches] = useState<Catch[]>([]);
+    const [communityMappedCatches, setCommunityMappedCatches] = useState<Catch[]>([]);
 
     useEffect(() => {
         const loadMappedCatches = async () => {
@@ -27,6 +30,33 @@ export default function TheMapNative({
         loadMappedCatches();
         return catchesService.subscribe(loadMappedCatches);
     }, []);
+
+    useEffect(() => {
+        if (!showCommunityPins) {
+            setCommunityMappedCatches([]);
+            return;
+        }
+
+        const loadCommunityMappedCatches = async () => {
+            try {
+                const [currentUser, communityCatches] = await Promise.all([
+                    authService.getCurrentUser(),
+                    catchesService.getCommunityCatches(true),
+                ]);
+
+                setCommunityMappedCatches(communityCatches.filter((item) => (
+                    item.userId !== currentUser.userId &&
+                    typeof item.latitude === 'number' &&
+                    typeof item.longitude === 'number'
+                )));
+            } catch (error) {
+                console.error('Error fetching community catch map points:', error);
+            }
+        };
+
+        loadCommunityMappedCatches();
+        return catchesService.subscribe(loadCommunityMappedCatches);
+    }, [showCommunityPins]);
 
     return (
         <MapView
@@ -57,6 +87,19 @@ export default function TheMapNative({
                     }}
                     title={catchData.fish}
                     description={`${catchData.location} | ${catchData.weight} lbs, ${catchData.length} in`}
+                />
+            ))}
+
+            {communityMappedCatches.map((catchData) => (
+                <Marker
+                    key={`community-${catchData.id}`}
+                    coordinate={{
+                        latitude: catchData.latitude as number,
+                        longitude: catchData.longitude as number,
+                    }}
+                    title={catchData.fish}
+                    description={`by ${catchData.userName ?? 'Angler'} | ${catchData.location} | ${catchData.weight} lbs, ${catchData.length} in`}
+                    pinColor="#3fd576"
                 />
             ))}
 

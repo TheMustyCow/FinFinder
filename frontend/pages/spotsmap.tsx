@@ -69,6 +69,7 @@ export default function SpotsMapScreen() {
                         <MapWrapper
                             selectionMode={isSelectingCatchLocation}
                             selectedCoordinate={selectedCoordinate}
+                            showCommunityPins
                             onSelectCoordinate={selectCatchCoordinate}
                             onCancelSelection={cancelCatchCoordinateSelection}
                         />

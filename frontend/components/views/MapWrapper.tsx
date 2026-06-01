@@ -5,6 +5,7 @@ import type { CatchCoordinate } from '../../services/catchDraft';
 export type MapWrapperProps = {
     selectionMode?: boolean;
     selectedCoordinate?: CatchCoordinate | null;
+    showCommunityPins?: boolean;
     onSelectCoordinate?: (coordinate: CatchCoordinate) => void;
     onCancelSelection?: () => void;
 };

@@ -12,6 +12,7 @@ import {
 import 'leaflet/dist/leaflet.css';
 import type { MapWrapperProps } from './MapWrapper';
 import { catchesService, type Catch as LoggedCatch } from '../../services/catches';
+import { authService } from '../../services/auth';
 import { colors } from '../../constants/colors';
 
 const LeafletMapContainer = MapContainer as any;
@@ -36,6 +37,23 @@ L.Icon.Default.mergeOptions({
 const governmentLakeIcon = new L.Icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
     iconSize: [32, 32],
+});
+
+const leafletMarkerShadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+const communityMarkerSvg = encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">
+        <path fill="#3fd576" stroke="#166534" stroke-width="1.5" d="M12.5 1C6.1 1 1 6.2 1 12.6c0 8.7 11.5 27 11.5 27S24 21.3 24 12.6C24 6.2 18.9 1 12.5 1z"/>
+        <circle cx="12.5" cy="12.5" r="4.4" fill="#f0fdf4"/>
+    </svg>
+`);
+const communityFishingSpotIcon = new (L.Icon as any)({
+    iconUrl: `data:image/svg+xml;charset=UTF-8,${communityMarkerSvg}`,
+    iconRetinaUrl: `data:image/svg+xml;charset=UTF-8,${communityMarkerSvg}`,
+    shadowUrl: leafletMarkerShadowUrl,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
 });
 
 /* Types */
@@ -240,11 +258,13 @@ function SelectCoordinateHandler({
 export default function WebMap({
                                    selectionMode = false,
                                    selectedCoordinate,
+                                   showCommunityPins = false,
                                    onSelectCoordinate,
                                }: MapWrapperProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [pins, setPins] = useState<Pin[]>([]);
     const [mappedCatches, setMappedCatches] = useState<LoggedCatch[]>([]);
+    const [communityMappedCatches, setCommunityMappedCatches] = useState<LoggedCatch[]>([]);
 
     const [govLakes, setGovLakes] = useState<GovLake[]>([]);
 
@@ -334,6 +354,33 @@ export default function WebMap({
         loadMappedCatches();
         return catchesService.subscribe(loadMappedCatches);
     }, []);
+
+    useEffect(() => {
+        if (!showCommunityPins) {
+            setCommunityMappedCatches([]);
+            return;
+        }
+
+        const loadCommunityMappedCatches = async () => {
+            try {
+                const [currentUser, communityCatches] = await Promise.all([
+                    authService.getCurrentUser(),
+                    catchesService.getCommunityCatches(true),
+                ]);
+
+                setCommunityMappedCatches(communityCatches.filter((item) => (
+                    item.userId !== currentUser.userId &&
+                    typeof item.latitude === 'number' &&
+                    typeof item.longitude === 'number'
+                )));
+            } catch (err) {
+                console.error('Error fetching community catch map points:', err);
+            }
+        };
+
+        loadCommunityMappedCatches();
+        return catchesService.subscribe(loadCommunityMappedCatches);
+    }, [showCommunityPins]);
 
 
     const savePin = async () => {
@@ -548,6 +595,32 @@ export default function WebMap({
                         <Popup>
                             <div>
                                 <strong>{catchData.fish}</strong>
+                                <br />
+                                {catchData.location}
+                                <br />
+                                {catchData.weight} lbs, {catchData.length} in
+                                {catchData.bait ? (
+                                    <>
+                                        <br />
+                                        Bait: {catchData.bait}
+                                    </>
+                                ) : null}
+                            </div>
+                        </Popup>
+                    </LeafletMarker>
+                ))}
+
+                {communityMappedCatches.map((catchData) => (
+                    <LeafletMarker
+                        key={`community-catch-${catchData.id}`}
+                        position={[catchData.latitude as number, catchData.longitude as number]}
+                        icon={communityFishingSpotIcon}
+                    >
+                        <Popup>
+                            <div>
+                                <strong>{catchData.fish}</strong>
+                                <br />
+                                by {catchData.userName ?? 'Angler'}
                                 <br />
                                 {catchData.location}
                                 <br />
