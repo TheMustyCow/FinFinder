@@ -1,7 +1,8 @@
 // app/_layout.tsx
+import { useEffect } from 'react';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { authService } from '../services/auth';
 import { colors } from '../constants/colors';
 
@@ -84,6 +85,12 @@ function AppHeader() {
 }
 
 export default function RootLayout() {
+    useEffect(() => {
+        if (Platform.OS === 'web' && typeof document !== 'undefined') {
+            document.title = 'Fin Finder';
+        }
+    }, []);
+
     return (
         <>
             <Stack
