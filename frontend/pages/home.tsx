@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImageGridBackground } from '../components/ui/ImageGridBackground';
@@ -12,7 +13,15 @@ type WeatherData = {
     condition: string;
 };
 
-const conditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy'];
+type WeatherApiResponse = {
+    current?: {
+        temperature_2m?: number;
+        relative_humidity_2m?: number;
+        wind_speed_10m?: number;
+        weather_code?: number;
+    };
+};
+
 const heroBannerImage = require('../assets/homeFishingBannerWide.png');
 
 const getTodaysDate = () => new Date().toLocaleDateString('en-US', {
@@ -21,20 +30,119 @@ const getTodaysDate = () => new Date().toLocaleDateString('en-US', {
     year: 'numeric',
 });
 
+const getWeatherCondition = (code?: number) => {
+    if (code === undefined) {
+        return 'Unknown';
+    }
+
+    if (code === 0) return 'Clear';
+    if ([1, 2].includes(code)) return 'Partly Cloudy';
+    if (code === 3) return 'Cloudy';
+    if ([45, 48].includes(code)) return 'Fog';
+    if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle';
+    if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'Rain';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
+    if ([95, 96, 99].includes(code)) return 'Storm';
+
+    return 'Mixed';
+};
+
+const getLocationLabel = async (coords: { latitude: number; longitude: number }) => {
+    try {
+        const [place] = await Location.reverseGeocodeAsync(coords);
+
+        if (!place) {
+            return 'Current location';
+        }
+
+        return [place.city, place.region].filter(Boolean).join(', ') || 'Current location';
+    } catch {
+        return 'Current location';
+    }
+};
+
+const fetchCurrentWeather = async (coords: { latitude: number; longitude: number }) => {
+    const params = new URLSearchParams({
+        latitude: String(coords.latitude),
+        longitude: String(coords.longitude),
+        current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code',
+        temperature_unit: 'fahrenheit',
+        wind_speed_unit: 'mph',
+        timezone: 'auto',
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+
+    if (!response.ok) {
+        throw new Error('Weather request failed');
+    }
+
+    const data = (await response.json()) as WeatherApiResponse;
+    const current = data.current;
+
+    if (
+        current?.temperature_2m === undefined ||
+        current.relative_humidity_2m === undefined ||
+        current.wind_speed_10m === undefined
+    ) {
+        throw new Error('Weather response was missing current conditions');
+    }
+
+    return {
+        temp: Math.round(current.temperature_2m),
+        humidity: Math.round(current.relative_humidity_2m),
+        windSpeed: Math.round(current.wind_speed_10m),
+        condition: getWeatherCondition(current.weather_code),
+    };
+};
+
 export default function Home() {
     const router = useRouter();
     const [weather, setWeather] = useState<WeatherData | null>(null);
+    const [weatherMessage, setWeatherMessage] = useState('Finding your location...');
     const todaysDate = useMemo(getTodaysDate, []);
 
     useEffect(() => {
-        const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+        let isMounted = true;
 
-        setWeather({
-            temp: Math.floor(Math.random() * 30 + 50),
-            humidity: Math.floor(Math.random() * 40 + 40),
-            windSpeed: Math.floor(Math.random() * 15 + 1),
-            condition: randomCondition,
-        });
+        async function loadWeather() {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+
+                if (status !== 'granted') {
+                    if (isMounted) {
+                        setWeatherMessage('Location permission denied. Enable location to show local weather.');
+                    }
+                    return;
+                }
+
+                const position = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                });
+                const coords = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                };
+                const [currentWeather, locationLabel] = await Promise.all([
+                    fetchCurrentWeather(coords),
+                    getLocationLabel(coords),
+                ]);
+
+                if (isMounted) {
+                    setWeather(currentWeather);
+                    setWeatherMessage(locationLabel);
+                }
+            } catch {
+                if (isMounted) {
+                    setWeatherMessage('Could not load weather for your location.');
+                }
+            }
+        }
+
+        loadWeather();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return (
@@ -63,6 +171,7 @@ export default function Home() {
 
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Today's Conditions</Text>
+                            <Text style={styles.weatherStatus}>{weatherMessage}</Text>
                             <View style={styles.conditionsGrid}>
                                 <ConditionItem label="Temp" value={weather ? `${weather.temp}°F` : '--'} />
                                 <ConditionItem label="Weather" value={weather?.condition ?? '--'} />
@@ -180,6 +289,12 @@ const styles = StyleSheet.create({
         color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
+        textAlign: 'center',
+    },
+    weatherStatus: {
+        color: '#64748b',
+        fontSize: 13,
+        lineHeight: 18,
         textAlign: 'center',
     },
     conditionsGrid: {
