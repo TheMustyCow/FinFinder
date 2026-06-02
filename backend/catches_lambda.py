@@ -45,6 +45,14 @@ def lambda_handler(event, context):
         if method == "POST" and catch_id:
             return _post_catch_to_community(username, catch_id)
 
+        catch_id = _extract_path_id(path, "/catches/", "") or _extract_path_id(
+            path,
+            "/api/catches/",
+            "",
+        )
+        if method == "DELETE" and catch_id:
+            return _delete_catch(username, catch_id)
+
         return _response(404, {"error": "Route not found"})
     except ValueError as error:
         return _response(400, {"error": str(error)})
@@ -178,6 +186,21 @@ def _post_catch_to_community(username: str, catch_id: str):
     return _response(200, _to_catch_response(response["Attributes"]))
 
 
+def _delete_catch(username: str, catch_id: str):
+    key = {
+        "Username": _username_pk(username),
+        "Catch#": _catch_sk(catch_id),
+    }
+
+    existing = table.get_item(Key=key).get("Item")
+    if not existing:
+        return _response(404, {"error": "Catch not found"})
+
+    table.delete_item(Key=key)
+
+    return _response(200, {"success": True, "id": catch_id})
+
+
 def _get_user(event) -> Tuple[str, str]:
     claims = (
         event.get("requestContext", {})
@@ -281,7 +304,7 @@ def _response(status_code: int, body: Any = None):
         "headers": {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Content-Type,Authorization,X-User-Id,X-User-Name",
-            "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
+            "Access-Control-Allow-Methods": "OPTIONS,GET,POST,DELETE",
             "Content-Type": "application/json",
         },
     }
@@ -322,10 +345,13 @@ def _matches_any(path: str, routes) -> bool:
 
 
 def _extract_path_id(path: str, prefix: str, suffix: str) -> Optional[str]:
-    if not path.startswith(prefix) or not path.endswith(suffix):
+    if not path.startswith(prefix):
         return None
 
-    catch_id = path[len(prefix) : -len(suffix)]
+    if suffix and not path.endswith(suffix):
+        return None
+
+    catch_id = path[len(prefix) : -len(suffix)] if suffix else path[len(prefix) :]
     return catch_id.strip("/") or None
 
 

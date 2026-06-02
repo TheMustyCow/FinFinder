@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Catch } from '../../services/catches';
 import { colors } from '../../constants/colors';
@@ -6,19 +6,33 @@ import { colors } from '../../constants/colors';
 interface CatchDetailModalProps {
     catchData: Catch | null;
     onClose: () => void;
+    onDelete?: (catchData: Catch) => void;
+    deleting?: boolean;
 }
 
-const formatDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-});
+const formatDate = (date: string) => {
+    const normalizedDate = date?.includes('T') ? date : `${date}T00:00:00`;
+    const parsedDate = new Date(normalizedDate);
 
-export default function CatchDetailModal({ catchData, onClose }: CatchDetailModalProps) {
+    if (Number.isNaN(parsedDate.getTime())) {
+        return 'Unknown date';
+    }
+
+    return parsedDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    });
+};
+
+export default function CatchDetailModal({ catchData, onClose, onDelete, deleting = false }: CatchDetailModalProps) {
     const scale = useRef(new Animated.Value(0.94)).current;
     const opacity = useRef(new Animated.Value(0)).current;
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
+        setShowDeleteConfirm(false);
+
         if (!catchData) {
             scale.setValue(0.94);
             opacity.setValue(0);
@@ -108,6 +122,58 @@ export default function CatchDetailModal({ catchData, onClose }: CatchDetailModa
                             </Text>
                         </ScrollView>
                     </View>
+
+                    {onDelete && (
+                        <View style={styles.actionWrap}>
+                            <Pressable
+                                accessibilityRole="button"
+                                disabled={deleting}
+                                onPress={() => setShowDeleteConfirm(true)}
+                                style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+                            >
+                                <Text style={styles.deleteButtonText}>
+                                    {deleting ? 'Deleting...' : 'Delete Catch'}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {showDeleteConfirm && onDelete && (
+                        <View style={styles.confirmOverlay}>
+                            <Pressable
+                                accessibilityLabel="Cancel delete catch"
+                                disabled={deleting}
+                                onPress={() => setShowDeleteConfirm(false)}
+                                style={styles.confirmBackdrop}
+                            />
+                            <View style={styles.confirmCard}>
+                                <Text style={styles.confirmTitle}>Delete this catch?</Text>
+                                <Text style={styles.confirmText}>
+                                    This will remove {catchData.fish} from My Catches and Community.
+                                </Text>
+                                <View style={styles.confirmActions}>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        disabled={deleting}
+                                        onPress={() => setShowDeleteConfirm(false)}
+                                        style={[styles.confirmCancelButton, deleting && styles.deleteButtonDisabled]}
+                                    >
+                                        <Text style={styles.confirmCancelText}>Cancel</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        disabled={deleting}
+                                        onPress={() => onDelete(catchData)}
+                                        style={[styles.confirmDeleteButton, deleting && styles.deleteButtonDisabled]}
+                                    >
+                                        <Text style={styles.confirmDeleteText}>
+                                            {deleting ? 'Deleting...' : 'Delete'}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    )}
                 </Animated.View>
             </View>
         </Modal>
@@ -209,5 +275,93 @@ const styles = StyleSheet.create({
         color: '#334155',
         fontSize: 15,
         lineHeight: 23,
+    },
+    actionWrap: {
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+    },
+    deleteButton: {
+        backgroundColor: colors.dangerButtonBackground,
+        borderColor: colors.dangerButtonBorder,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    deleteButtonDisabled: {
+        opacity: 0.6,
+    },
+    deleteButtonText: {
+        color: colors.dangerText,
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    confirmOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+    },
+    confirmBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(11, 18, 32, 0.48)',
+    },
+    confirmCard: {
+        width: '100%',
+        maxWidth: 440,
+        backgroundColor: '#ffffff',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#d7e2e8',
+        padding: 22,
+        shadowColor: colors.cardShadow,
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.24,
+        shadowRadius: 26,
+    },
+    confirmTitle: {
+        color: colors.primaryText,
+        fontSize: 22,
+        fontWeight: '800',
+        marginBottom: 8,
+    },
+    confirmText: {
+        color: '#475569',
+        fontSize: 15,
+        fontWeight: '600',
+        lineHeight: 22,
+        marginBottom: 20,
+    },
+    confirmActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+    },
+    confirmCancelButton: {
+        backgroundColor: '#ffffff',
+        borderColor: '#d7e2e8',
+        borderRadius: 8,
+        borderWidth: 1,
+        paddingVertical: 11,
+        paddingHorizontal: 18,
+    },
+    confirmCancelText: {
+        color: colors.primaryText,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    confirmDeleteButton: {
+        backgroundColor: colors.dangerText,
+        borderColor: colors.dangerText,
+        borderRadius: 8,
+        borderWidth: 1,
+        paddingVertical: 11,
+        paddingHorizontal: 18,
+    },
+    confirmDeleteText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '800',
     },
 });

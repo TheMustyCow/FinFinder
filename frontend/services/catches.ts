@@ -184,4 +184,38 @@ export const catchesService = {
             };
         }
     },
+
+    async deleteCatch(catchId: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/catches/${catchId}`, {
+                method: 'DELETE',
+                headers: await getHeaders(),
+            });
+
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                return {
+                    success: false,
+                    error: body?.error ?? 'Unable to delete catch',
+                };
+            }
+
+            if (myCatchesCache) {
+                myCatchesCache = myCatchesCache.filter((item) => item.id !== catchId);
+            }
+
+            if (communityCatchesCache) {
+                communityCatchesCache = communityCatchesCache.filter((item) => item.id !== catchId);
+            }
+
+            notifyListeners();
+
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unable to delete catch',
+            };
+        }
+    },
 };

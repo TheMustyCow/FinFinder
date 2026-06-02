@@ -27,6 +27,7 @@ export default function MyCatches() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSelectingCoordinate, setIsSelectingCoordinate] = useState(catchDraftService.isSelectingCoordinate());
     const [isSaving, setIsSaving] = useState(false);
+    const [deletingCatchId, setDeletingCatchId] = useState<string | null>(null);
     const [hoveredPublishedCatchId, setHoveredPublishedCatchId] = useState<string | null>(null);
     const [selectedCatch, setSelectedCatch] = useState<Catch | null>(null);
     const publishedHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,6 +157,25 @@ export default function MyCatches() {
     const shareCatchFromCard = (event: GestureResponderEvent, catchId: string) => {
         event.stopPropagation();
         shareCatchToCommunity(catchId);
+    };
+
+    const deleteCatch = async (catchData: Catch) => {
+        if (deletingCatchId) {
+            return;
+        }
+
+        setDeletingCatchId(catchData.id);
+
+        const result = await catchesService.deleteCatch(catchData.id);
+
+        if (result.success) {
+            setSelectedCatch(null);
+            setCatches((currentCatches) => currentCatches.filter((item) => item.id !== catchData.id));
+        } else {
+            Alert.alert('Unable to delete catch', result.error ?? 'Please try again.');
+        }
+
+        setDeletingCatchId(null);
     };
 
     const showPublishedTooltip = (catchId: string) => {
@@ -473,6 +493,8 @@ export default function MyCatches() {
             <CatchDetailModal
                 catchData={selectedCatch}
                 onClose={() => setSelectedCatch(null)}
+                onDelete={deleteCatch}
+                deleting={!!selectedCatch && deletingCatchId === selectedCatch.id}
             />
         </SafeAreaView>
     );
