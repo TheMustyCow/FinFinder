@@ -1,0 +1,193 @@
+// pages/community.tsx
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import { useState, useRef, useEffect } from 'react';
+import Card from '../components/community/Card';
+import CatchDetailModal from '../components/catches/CatchDetailModal';
+import { ImageGridBackground } from '../components/ui/ImageGridBackground';
+import { catchesService, type Catch } from '../services/catches';
+import { colors } from '../constants/colors';
+
+export default function CommunityScreen() {
+    const [catches, setCatches] = useState<Catch[]>([]);
+    const [loadError, setLoadError] = useState('');
+    const [currentPage, setCurrentPage] = useState(0);
+    const [selectedCatch, setSelectedCatch] = useState<Catch | null>(null);
+    const cardsPerPage = 18;
+    const totalPages = Math.max(1, Math.ceil(catches.length / cardsPerPage));
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    // Fetch catches from the mediator service on component mount
+    useEffect(() => {
+        loadCatches();
+        return catchesService.subscribe(loadCatches);
+    }, []);
+
+    const loadCatches = async () => {
+        try {
+            const communityCatches = await catchesService.getCommunityCatches();
+            setCatches(communityCatches);
+            setLoadError('');
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Unable to load community catches');
+        }
+    };
+
+    useEffect(() => {
+        setTimeout(() => {
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }, 0);
+    }, [currentPage]);
+
+    const currentCatches = catches.slice(
+        currentPage * cardsPerPage,
+        (currentPage + 1) * cardsPerPage
+    );
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Community</Text>
+            </View>
+
+            <ImageGridBackground>
+                <View style={styles.contentContainer}>
+                    <ScrollView
+                        ref={scrollViewRef}
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        {loadError ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>Unable to load community catches</Text>
+                                <Text style={styles.emptyText}>{loadError}</Text>
+                            </View>
+                        ) : currentCatches.length > 0 ? (
+                            <View style={styles.grid}>
+                                {currentCatches.map((catchData) => (
+                                    <Card
+                                        key={catchData.id}
+                                        catchData={catchData}
+                                        onPress={() => setSelectedCatch(catchData)}
+                                    />
+                                ))}
+                            </View>
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>No community catches yet</Text>
+                                <Text style={styles.emptyText}>Post one from My Catches to start the feed.</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                    <View style={styles.pagination}>
+                        <TouchableOpacity
+                            style={[styles.button, currentPage === 0 && styles.buttonDisabled]}
+                            onPress={() => setCurrentPage(p => Math.max(0, p - 1))}
+                            disabled={currentPage === 0}
+                        >
+                            <Text style={styles.buttonText}>Previous</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.pageIndicator}>Page {currentPage + 1} of {totalPages}</Text>
+                        <TouchableOpacity
+                            style={[styles.button, currentPage === totalPages - 1 && styles.buttonDisabled]}
+                            onPress={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={currentPage === totalPages - 1}
+                        >
+                            <Text style={styles.buttonText}>Next</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </ImageGridBackground>
+            <CatchDetailModal
+                catchData={selectedCatch}
+                onClose={() => setSelectedCatch(null)}
+            />
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.pageBackground,
+    },
+    header: {
+        backgroundColor: 'white',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    title: {
+        fontSize: 20,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    contentContainer: {
+        flex: 1,
+        margin: 30,
+        marginHorizontal: 100,
+        marginTop: 30,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        overflow: 'hidden',
+        flexDirection: 'column',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        padding: 15,
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
+        columnGap: '2%',
+    },
+    emptyState: {
+        minHeight: 320,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyTitle: {
+        color: colors.primaryText,
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    emptyText: {
+        color: '#64748b',
+        fontSize: 14,
+    },
+    pagination: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+        backgroundColor: 'white',
+    },
+    button: {
+        backgroundColor: colors.primaryButtonBackground,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginHorizontal: 15,
+    },
+    buttonDisabled: {
+        backgroundColor: colors.paginationDisabledButtonBackground,
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    pageIndicator: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+    },
+});
