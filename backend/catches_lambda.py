@@ -45,6 +45,14 @@ def lambda_handler(event, context):
         if method == "POST" and catch_id:
             return _post_catch_to_community(username, catch_id)
 
+        catch_id = _extract_path_id(path, "/catches/", "") or _extract_path_id(
+            path,
+            "/api/catches/",
+            "",
+        )
+        if method == "DELETE" and catch_id:
+            return _delete_catch(username, catch_id)
+
         return _response(404, {"error": "Route not found"})
     except ValueError as error:
         return _response(400, {"error": str(error)})
@@ -65,7 +73,18 @@ def _create_catch(event, user_id: str, username: str):
     bait = _optional_string(body, "bait")
     weight = _required_number(body, "weight")
     length = _required_number(body, "length")
+    latitude = _optional_number(body, "latitude")
+    longitude = _optional_number(body, "longitude")
     post_to_community = bool(body.get("isPostedToCommunity", False))
+
+    if (latitude is None) != (longitude is None):
+        raise ValueError("latitude and longitude must be provided together")
+
+    if latitude is not None and not (Decimal("-90") <= latitude <= Decimal("90")):
+        raise ValueError("latitude must be between -90 and 90")
+
+    if longitude is not None and not (Decimal("-180") <= longitude <= Decimal("180")):
+        raise ValueError("longitude must be between -180 and 180")
 
     now = datetime.now(timezone.utc)
     catch_id = str(uuid.uuid4())
@@ -95,6 +114,12 @@ def _create_catch(event, user_id: str, username: str):
     if bait:
         item["bait"] = bait
         item["Bait"] = bait
+
+    if latitude is not None and longitude is not None:
+        item["latitude"] = latitude
+        item["Latitude"] = latitude
+        item["longitude"] = longitude
+        item["Longitude"] = longitude
 
     if post_to_community:
         item["communityPk"] = "COMMUNITY"
@@ -159,6 +184,21 @@ def _post_catch_to_community(username: str, catch_id: str):
     )
 
     return _response(200, _to_catch_response(response["Attributes"]))
+
+
+def _delete_catch(username: str, catch_id: str):
+    key = {
+        "Username": _username_pk(username),
+        "Catch#": _catch_sk(catch_id),
+    }
+
+    existing = table.get_item(Key=key).get("Item")
+    if not existing:
+        return _response(404, {"error": "Catch not found"})
+
+    table.delete_item(Key=key)
+
+    return _response(200, {"success": True, "id": catch_id})
 
 
 def _get_user(event) -> Tuple[str, str]:
@@ -228,6 +268,18 @@ def _required_number(body: Dict[str, Any], field: str) -> Decimal:
         raise ValueError(f"{field} must be a number")
 
 
+def _optional_number(body: Dict[str, Any], field: str) -> Optional[Decimal]:
+    value = body.get(field)
+
+    if value in (None, ""):
+        return None
+
+    try:
+        return Decimal(str(value))
+    except Exception:
+        raise ValueError(f"{field} must be a number")
+
+
 def _to_catch_response(item: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": item.get("id"),
@@ -235,6 +287,8 @@ def _to_catch_response(item: Dict[str, Any]) -> Dict[str, Any]:
         "weight": _json_safe(item.get("weight") or item.get("Weight")),
         "length": _json_safe(item.get("length") or item.get("Length")),
         "location": item.get("location") or item.get("Location"),
+        "latitude": _json_safe(item.get("latitude") or item.get("Latitude")),
+        "longitude": _json_safe(item.get("longitude") or item.get("Longitude")),
         "date": item.get("date"),
         "desc": item.get("desc") or item.get("Description") or "",
         "userId": item.get("userId"),
@@ -250,7 +304,7 @@ def _response(status_code: int, body: Any = None):
         "headers": {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Content-Type,Authorization,X-User-Id,X-User-Name",
-            "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
+            "Access-Control-Allow-Methods": "OPTIONS,GET,POST,DELETE",
             "Content-Type": "application/json",
         },
     }
@@ -291,10 +345,13 @@ def _matches_any(path: str, routes) -> bool:
 
 
 def _extract_path_id(path: str, prefix: str, suffix: str) -> Optional[str]:
-    if not path.startswith(prefix) or not path.endswith(suffix):
+    if not path.startswith(prefix):
         return None
 
-    catch_id = path[len(prefix) : -len(suffix)]
+    if suffix and not path.endswith(suffix):
+        return None
+
+    catch_id = path[len(prefix) : -len(suffix)] if suffix else path[len(prefix) :]
     return catch_id.strip("/") or None
 
 
